@@ -1,6 +1,11 @@
 package main
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var EmptyTimeSeriesErr = errors.New("no records in timeseries")
 
 // Record struct
 type Record struct {
@@ -36,10 +41,39 @@ func (ts *TimeSeries) AddPoint(value float64) {
 	ts.Records = append(ts.Records, record)
 }
 
-func (ts *TimeSeries) Average() float64 {
+func (ts *TimeSeries) Average() (float64, error) {
+	if len(ts.Records) == 0 {
+		return 0.0, EmptyTimeSeriesErr
+	}
 	var sum float64 = 0.0
 	for _, v := range ts.Records {
 		sum += v.value
 	}
-	return sum / float64(len(ts.Records))
+	return sum / float64(len(ts.Records)), nil
+}
+
+func (ts *TimeSeries) Max() (*Record, error) {
+	if len(ts.Records) == 0 {
+		return nil, EmptyTimeSeriesErr
+	}
+	max := ts.Records[0]
+	for _, v := range ts.Records {
+		if v.value > max.value {
+			max = v
+		}
+	}
+	return max, nil
+}
+
+func (ts *TimeSeries) Min() (*Record, error) {
+	if len(ts.Records) == 0 {
+		return nil, EmptyTimeSeriesErr
+	}
+	min := ts.Records[0]
+	for _, v := range ts.Records {
+		if v.value < min.value {
+			min = v
+		}
+	}
+	return min, nil
 }

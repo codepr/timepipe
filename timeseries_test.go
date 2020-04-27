@@ -26,8 +26,32 @@ func TestTimeSeriesAverage(t *testing.T) {
 	ts.AddPoint(106.2)
 	ts.AddPoint(98.22)
 	ts.AddPoint(91.2)
-	avg := ts.Average()
+	avg, _ := ts.Average()
 	if avg != 98.455 {
 		t.Errorf("Wrong average calculated, expected %v got %v", 98.455, avg)
+	}
+}
+
+func TestTimeSeriesMax(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
+	ts.AddPoint(98.2)
+	ts.AddPoint(106.2)
+	ts.AddPoint(98.22)
+	ts.AddPoint(91.2)
+	max, _ := ts.Max()
+	if max.value != 106.2 {
+		t.Errorf("Wrong maximum calculated, expected %v got %v", 106.2, max)
+	}
+}
+
+func TestTimeSeriesMin(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
+	ts.AddPoint(98.2)
+	ts.AddPoint(106.2)
+	ts.AddPoint(98.22)
+	ts.AddPoint(91.2)
+	min, _ := ts.Min()
+	if min.value != 91.2 {
+		t.Errorf("Wrong maximum calculated, expected %v got %v", 91.2, min)
 	}
 }
