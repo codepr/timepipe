@@ -2,20 +2,32 @@ package main
 
 import "testing"
 
-func testTimeSeriesNew(t *testing.T) {
-	ts := NewTestSeries("test-ts", 3000)
+func TestTimeSeriesNew(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
 	if ts == nil || ts.Name != "test-ts" || ts.Retention != 3000 {
 		t.Errorf("Failed to create a new TimeSeries")
 	}
 }
 
-func testTimeSeriesAddPoint(t *testing.T) {
-	ts := NewTestSeries("test-ts", 3000)
+func TestTimeSeriesAddPoint(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
 	ts.AddPoint(98.2)
 	if len(ts.Records) != 1 {
 		t.Errorf("Failed to add new point to TimeSeries")
 	}
 	if ts.Records[0].value != 98.2 {
 		t.Errorf("Failed to add new point to TimeSeries")
+	}
+}
+
+func TestTimeSeriesAverage(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
+	ts.AddPoint(98.2)
+	ts.AddPoint(106.2)
+	ts.AddPoint(98.22)
+	ts.AddPoint(91.2)
+	avg := ts.Average()
+	if avg != 98.455 {
+		t.Errorf("Wrong average calculated, expected %v got %v", 98.455, avg)
 	}
 }

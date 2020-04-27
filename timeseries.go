@@ -21,7 +21,7 @@ func newRecord(value float64) *Record {
 }
 
 // NewTestSeries create a new TimeSeries by accepting a name and a retention value
-func NewTestSeries(name string, retention int64) *TimeSeries {
+func NewTimeSeries(name string, retention int64) *TimeSeries {
 	return &TimeSeries{
 		Name:      name,
 		Retention: retention,
@@ -34,4 +34,12 @@ func NewTestSeries(name string, retention int64) *TimeSeries {
 func (ts *TimeSeries) AddPoint(value float64) {
 	record := newRecord(value)
 	ts.Records = append(ts.Records, record)
+}
+
+func (ts *TimeSeries) Average() float64 {
+	var sum float64 = 0.0
+	for _, v := range ts.Records {
+		sum += v.value
+	}
+	return sum / float64(len(ts.Records))
 }
