@@ -141,3 +141,20 @@ func TestTimeSeriesFind(t *testing.T) {
 		t.Errorf("Find failed")
 	}
 }
+
+func TestTimeSeriesAverageInterval(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
+	ts.AddPoint(98.2)
+	time.Sleep(200 * time.Millisecond)
+	ts.AddPoint(106.2)
+	ts.AddPoint(97.5)
+	ts.AddPoint(91.2)
+	time.Sleep(200 * time.Millisecond)
+	ts.AddPoint(65.98)
+	ts.AddPoint(77.0)
+	records, _ := ts.AverageInterval(200)
+	if len(records) != 2 {
+		t.Errorf("AverageInterval return the wrong points, expected %v got %v",
+			2, len(records))
+	}
+}

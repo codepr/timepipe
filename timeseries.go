@@ -157,3 +157,33 @@ func (ts *TimeSeries) Find(timestamp int64) (*Record, int) {
 	}
 	return nil, -1
 }
+
+func (ts *TimeSeries) AverageInterval(interval_ms int64) ([]Record, error) {
+	first, err := ts.First()
+	if err != nil {
+		return nil, err
+	}
+	last, err := ts.Last()
+	if err != nil {
+		return nil, err
+	}
+	interval := interval_ms * 1e6
+	firstTs := (first.Timestamp / interval) * interval
+	result := make([]Record, 0)
+	var current int64 = firstTs + interval
+	var sum float64 = 0.0
+	var total int = 0
+	for current < last.Timestamp {
+		sum = 0.0
+		total = 0
+		for _, r := range ts.Records {
+			if r.Timestamp > current-interval && r.Timestamp < current {
+				sum += r.value
+				total += 1
+			}
+		}
+		result = append(result, Record{current, sum / float64(total)})
+		current += interval
+	}
+	return result, nil
+}
