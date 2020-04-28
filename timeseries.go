@@ -1,3 +1,29 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2020, Andrea Giacomo Baldan
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package main
 
 import (
@@ -5,12 +31,14 @@ import (
 	"time"
 )
 
-var EmptyTimeSeriesErr = errors.New("no records in timeseries")
+var (
+	EmptyTimeSeriesErr = errors.New("no records in timeseries")
+)
 
 // Record represents a point in the timeseries, currently holds only a float
 // value
 type Record struct {
-	Timestamp time.Time
+	Timestamp int64
 	value     float64
 }
 
@@ -24,7 +52,7 @@ type TimeSeries struct {
 }
 
 func newRecord(value float64) *Record {
-	return &Record{time.Now(), value}
+	return &Record{time.Now().UnixNano(), value}
 }
 
 // NewTestSeries create a new TimeSeries by accepting a name and a retention value
@@ -102,9 +130,30 @@ func (ts *TimeSeries) Range(lo, hi int64) ([]Record, error) {
 	}
 	result := make([]Record, 0)
 	for _, record := range ts.Records {
-		if record.Timestamp.UnixNano() >= lo && record.Timestamp.UnixNano() <= hi {
+		if record.Timestamp >= lo && record.Timestamp <= hi {
 			result = append(result, *record)
 		}
 	}
 	return result, nil
+}
+
+func (ts *TimeSeries) Find(timestamp int64) (*Record, int) {
+	if first, err := ts.First(); err != nil || first.Timestamp > timestamp {
+		return nil, -1
+	}
+	if last, err := ts.Last(); err != nil || last.Timestamp < timestamp {
+		return nil, -1
+	}
+	var mid, left, right int = 0, 0, len(ts.Records) - 1
+	for left < right {
+		mid = (left + right) / 2
+		if ts.Records[mid].Timestamp < timestamp {
+			left = mid
+		} else if ts.Records[mid].Timestamp > timestamp {
+			right = mid
+		} else {
+			return ts.Records[mid], mid
+		}
+	}
+	return nil, -1
 }
