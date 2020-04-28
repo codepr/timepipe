@@ -7,13 +7,15 @@ import (
 
 var EmptyTimeSeriesErr = errors.New("no records in timeseries")
 
-// Record struct
+// Record represents a point in the timeseries, currently holds only a float
+// value
 type Record struct {
 	Timestamp time.Time
 	value     float64
 }
 
-// TimeSeries struct
+// TimeSeries represents a time series, essentially an append-only log of point
+// values in time
 type TimeSeries struct {
 	Name      string
 	Retention int64
@@ -36,9 +38,10 @@ func NewTimeSeries(name string, retention int64) *TimeSeries {
 }
 
 // AddPoint add a new point to an existing TimeSeries
-func (ts *TimeSeries) AddPoint(value float64) {
+func (ts *TimeSeries) AddPoint(value float64) Record {
 	record := newRecord(value)
 	ts.Records = append(ts.Records, record)
+	return *record
 }
 
 func (ts *TimeSeries) Average() (float64, error) {
@@ -76,4 +79,32 @@ func (ts *TimeSeries) Min() (*Record, error) {
 		}
 	}
 	return min, nil
+}
+
+func (ts *TimeSeries) First() (*Record, error) {
+	if len(ts.Records) == 0 {
+		return nil, EmptyTimeSeriesErr
+	}
+	return ts.Records[0], nil
+}
+
+func (ts *TimeSeries) Last() (*Record, error) {
+	if len(ts.Records) == 0 {
+		return nil, EmptyTimeSeriesErr
+	}
+	last := len(ts.Records) - 1
+	return ts.Records[last], nil
+}
+
+func (ts *TimeSeries) Range(lo, hi int64) ([]Record, error) {
+	if len(ts.Records) == 0 {
+		return nil, EmptyTimeSeriesErr
+	}
+	result := make([]Record, 0)
+	for _, record := range ts.Records {
+		if record.Timestamp.UnixNano() >= lo && record.Timestamp.UnixNano() <= hi {
+			result = append(result, *record)
+		}
+	}
+	return result, nil
 }
