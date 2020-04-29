@@ -1,16 +1,17 @@
 package main
 
 import (
+	"binary"
 	"bufio"
+	"bytes"
+	"io"
 	"log"
 	"net"
-	"sync"
 )
 
-type Handler func(*bufio.ReadWriter) Response
+type Handler func(request *Request) Response
 
 type Server struct {
-	sync.RWMutex
 	listener net.Listener
 	handler  map[int]Handler
 }
@@ -20,9 +21,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) AddHandler(command int, f Handler) {
-	s.Lock()
 	s.handler[command] = f
-	s.Unlock()
 }
 
 func (s *Server) Run(protocol, host, port string) {
@@ -65,19 +64,37 @@ func (s *Server) handleRequest(conn net.Conn) {
 
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
-	for {
-		s.RLock()
-		handle, ok := s.handler[0x01]
-		if !ok {
-			log.Print("Can't get handler")
-		}
-		s.RUnlock()
-
-		response := handle(rw)
-
-		_, err := conn.Write(response.Pack())
-		if err != nil {
-			log.Print("Error sending response")
+	header, err := parseHeader(rw)
+	if err != nil {
+		log.Println("Error unpacking header")
+	} else {
+		for {
+			if handle, ok := s.handler[int(header.Opcode())]; !ok {
+				log.Print("Can't get handler")
+			} else {
+				// Read the bytes left, a.k.a. payload of the request
+				buf := make([]byte, header.Len())
+				if _, err := io.ReadAtLeast(rw, buf, int(header.Len())); err != nil {
+					log.Fatal("Can't read remaining bytes left", err)
+				}
+				packet, err := UnpackRequest(buf)
+				if err != nil {
+					log.Println("Couldn't unpack request")
+				}
+				response := handle(packet)
+				_, err = conn.Write(response.Pack())
+				if err != nil {
+					log.Print("Error sending response")
+				}
+			}
 		}
 	}
+}
+
+func parseHeader(rw *bufio.ReadWriter) (*Header, error) {
+	buf := make([]byte, 9)
+	if _, err := io.ReadAtLeast(rw, buf, 9); err != nil {
+		return nil, err
+	}
+	return UnpackHeader(buf)
 }
