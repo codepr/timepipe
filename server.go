@@ -1,27 +1,25 @@
 package main
 
 import (
-	"binary"
 	"bufio"
-	"bytes"
+	"encoding"
 	"io"
 	"log"
 	"net"
 )
 
-type Handler func(request *Request) Response
+const (
+	TYPE = "tcp"
+	HOST = "localhost"
+	PORT = "4040"
+)
 
 type Server struct {
 	listener net.Listener
-	handler  map[int]Handler
 }
 
 func NewServer() *Server {
-	return &Server{handler: map[int]Handler{}}
-}
-
-func (s *Server) AddHandler(command int, f Handler) {
-	s.handler[command] = f
+	return &Server{}
 }
 
 func (s *Server) Run(protocol, host, port string) {
@@ -50,11 +48,11 @@ func (s *Server) Run(protocol, host, port string) {
 
 	// And on process as well
 	for {
-		go s.handleRequest(<-ch)
+		go s.serveConn(<-ch)
 	}
 }
 
-func (s *Server) handleRequest(conn net.Conn) {
+func (s *Server) serveConn(conn net.Conn) {
 	// Handle connection close
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -64,41 +62,57 @@ func (s *Server) handleRequest(conn net.Conn) {
 
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
-	header, err := parseHeader(rw)
-	if err != nil {
-		log.Println("Error unpacking header")
-	} else {
-		for {
-			if handle, ok := s.handler[int(header.Opcode())]; !ok {
-				log.Print("Can't get handler")
-			} else {
-				// Read the bytes left, a.k.a. payload of the request
-				buf := make([]byte, header.Len())
-				if _, err := io.ReadAtLeast(rw, buf, int(header.Len())); err != nil {
-					log.Fatal("Can't read remaining bytes left", err)
-				}
-				packet, err := UnpackRequest(buf)
-				if err != nil {
-					log.Println("Couldn't unpack request")
-				}
-				response := handle(packet)
-				_, err = conn.Write(response.Pack())
-				if err != nil {
-					log.Print("Error sending response")
-				}
-			}
+	for {
+		buf := make([]byte, 9)
+		if _, err := io.ReadAtLeast(rw, buf, 9); err != nil {
+			log.Print("Can't read header bytes:", err)
+			return
+		}
+		header := &Header{}
+		if err := header.UnmarshalBinary(buf); err != nil {
+			log.Print("Can't unmarshal header:", err)
+			return
+		}
+		response := handleRequest(rw, header)
+		data, err := response.MarshalBinary()
+		if err != nil {
+			log.Print(err)
+			return
+		}
+		_, err = conn.Write(data)
+		if err != nil {
+			log.Print("Error sending response")
 		}
 	}
 }
 
-func parseHeader(rw *bufio.ReadWriter) (*Header, error) {
-	buf := make([]byte, 9)
-	if _, err := io.ReadAtLeast(rw, buf, 9); err != nil {
-		return nil, err
+func handleRequest(rw *bufio.ReadWriter, h *Header) encoding.BinaryMarshaler {
+	response := AckResponse{
+		header: Header{ACK, 0},
 	}
-	header := &Header{}
-	if err := header.UnmarshalBinary(buf); err != nil {
-		return nil, err
+	// Read the bytes left, a.k.a. payload of the request
+	buf := make([]byte, h.Len())
+	if _, err := io.ReadAtLeast(rw, buf, int(h.Len())); err != nil {
+		log.Fatal("Can't read remaining bytes left", err)
 	}
-	return header, nil
+	switch h.Opcode() {
+	case CREATE:
+		// TODO
+	case DELETE:
+		// TODO
+	case ADDPOINT:
+		// TODO
+	case MADDPOINT:
+		// TODO
+	case QUERY:
+		// TODO
+	default:
+		// TODO
+	}
+	return response
+}
+
+func main() {
+	server := NewServer()
+	server.Run(TYPE, HOST, PORT)
 }

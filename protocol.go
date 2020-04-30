@@ -11,15 +11,8 @@ const (
 	ADDPOINT
 	MADDPOINT
 	QUERY
+	ACK
 )
-
-type Request interface {
-	Pack() []byte
-}
-
-type Response interface {
-	Pack() []byte
-}
 
 type Header struct {
 	value uint8
@@ -70,11 +63,6 @@ func (h *Header) UnmarshalBinary(buf []byte) error {
 	h.value = value
 	h.size = size
 	return nil
-}
-
-func UnpackRequest(buf []byte) (*Request, error) {
-	// TODO
-	return nil, nil
 }
 
 func (r AckResponse) MarshalBinary() ([]byte, error) {
