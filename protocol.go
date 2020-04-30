@@ -42,7 +42,7 @@ func (h *Header) Status() uint8 {
 	return h.value >> 6
 }
 
-func PackHeader(h *Header) ([]byte, error) {
+func (h *Header) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.LittleEndian, h.value); err != nil {
 		return nil, err
@@ -53,21 +53,23 @@ func PackHeader(h *Header) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func UnpackHeader(buf []byte) (*Header, error) {
+func (h *Header) UnmarshalBinary(buf []byte) error {
 	// Read operation code
 	b := bytes.NewReader(buf)
 	var value uint8
 	if err := binary.Read(b, binary.LittleEndian, &value); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Read payload len in bytes
 	var size uint64
 	if err := binary.Read(b, binary.LittleEndian, &size); err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Header{value, size}, nil
+	h.value = value
+	h.size = size
+	return nil
 }
 
 func UnpackRequest(buf []byte) (*Request, error) {
@@ -75,8 +77,8 @@ func UnpackRequest(buf []byte) (*Request, error) {
 	return nil, nil
 }
 
-func (r AckResponse) Pack() ([]byte, error) {
-	header, err := packHeader(&r.header)
+func (r AckResponse) MarshalBinary() ([]byte, error) {
+	header, err := r.header.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}

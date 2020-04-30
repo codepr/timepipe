@@ -96,5 +96,9 @@ func parseHeader(rw *bufio.ReadWriter) (*Header, error) {
 	if _, err := io.ReadAtLeast(rw, buf, 9); err != nil {
 		return nil, err
 	}
-	return UnpackHeader(buf)
+	header := &Header{}
+	if err := header.UnmarshalBinary(buf); err != nil {
+		return nil, err
+	}
+	return header, nil
 }
