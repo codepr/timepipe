@@ -15,22 +15,30 @@ const (
 )
 
 type Server struct {
-	listener net.Listener
+	protocol string
+	host     string
+	port     string
+	db       map[string]TimeSeries
 }
 
-func NewServer() *Server {
-	return &Server{}
+func NewServer(protocol, host, port string) *Server {
+	return &Server{
+		protocol: protocol,
+		host:     host,
+		port:     port,
+		db:       map[string]TimeSeries{},
+	}
 }
 
-func (s *Server) Run(protocol, host, port string) {
-	l, err := net.Listen(protocol, host+":"+port)
+func (s *Server) Run() {
+	l, err := net.Listen(s.protocol, s.host+":"+s.port)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer l.Close()
 
-	log.Print("Listening on " + host + ":" + port)
+	log.Print("Listening on " + s.host + ":" + s.port)
 
 	ch := make(chan net.Conn)
 
@@ -113,6 +121,6 @@ func handleRequest(rw *bufio.ReadWriter, h *Header) encoding.BinaryMarshaler {
 }
 
 func main() {
-	server := NewServer()
-	server.Run(TYPE, HOST, PORT)
+	server := NewServer(TYPE, HOST, PORT)
+	server.Run()
 }
