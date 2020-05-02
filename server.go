@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 const (
@@ -18,7 +19,7 @@ type Server struct {
 	protocol string
 	host     string
 	port     string
-	db       map[string]TimeSeries
+	db       *sync.Map
 }
 
 func NewServer(protocol, host, port string) *Server {
@@ -26,7 +27,7 @@ func NewServer(protocol, host, port string) *Server {
 		protocol: protocol,
 		host:     host,
 		port:     port,
-		db:       map[string]TimeSeries{},
+		db:       new(sync.Map),
 	}
 }
 
@@ -81,7 +82,7 @@ func (s *Server) serveConn(conn net.Conn) {
 			log.Print("Can't unmarshal header:", err)
 			return
 		}
-		response := handleRequest(rw, header)
+		response := s.handleRequest(rw, header)
 		data, err := response.MarshalBinary()
 		if err != nil {
 			log.Print(err)
@@ -94,10 +95,9 @@ func (s *Server) serveConn(conn net.Conn) {
 	}
 }
 
-func handleRequest(rw *bufio.ReadWriter, h *Header) encoding.BinaryMarshaler {
-	response := AckResponse{
-		header: Header{ACK, 0},
-	}
+func (s *Server) handleRequest(rw *bufio.ReadWriter,
+	h *Header) encoding.BinaryMarshaler {
+	response := &Header{ACK, 0}
 	// Read the bytes left, a.k.a. payload of the request
 	buf := make([]byte, h.Len())
 	if _, err := io.ReadAtLeast(rw, buf, int(h.Len())); err != nil {
@@ -105,9 +105,23 @@ func handleRequest(rw *bufio.ReadWriter, h *Header) encoding.BinaryMarshaler {
 	}
 	switch h.Opcode() {
 	case CREATE:
-		// TODO
+		create := CreatePacket{}
+		if err := UnmarshalBinary(buf, &create); err != nil {
+			log.Fatal("UnmarshalBinary:", err)
+		}
+		timeseries := NewTimeSeries(create.Name, create.Retention)
+		if _, ok := s.db.LoadOrStore(create.Name, timeseries); ok {
+			log.Println("Timeseries named " + timeseries.Name + " already exists")
+		} else {
+			log.Println("Created new timeseries named " + timeseries.Name)
+		}
 	case DELETE:
-		// TODO
+		delete := &CreatePacket{}
+		if err := UnmarshalBinary(buf, delete); err != nil {
+			log.Fatal("UnmarshalBinary:", err)
+		}
+		s.db.Delete(delete.Name)
+		log.Println("Deleted timeseries named " + delete.Name)
 	case ADDPOINT:
 		// TODO
 	case MADDPOINT:
