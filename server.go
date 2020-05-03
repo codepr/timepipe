@@ -97,7 +97,7 @@ func (s *Server) serveConn(conn net.Conn) {
 
 func (s *Server) handleRequest(rw *bufio.ReadWriter,
 	h *Header) encoding.BinaryMarshaler {
-	response := &Header{ACK, 0}
+	response := Header{ACK, 0}
 	// Read the bytes left, a.k.a. payload of the request
 	buf := make([]byte, h.Len())
 	if _, err := io.ReadAtLeast(rw, buf, int(h.Len())); err != nil {

@@ -15,6 +15,13 @@ const (
 	ACK
 )
 
+const (
+	OK = iota
+	TSNOTFOUND
+	TSEXISTS
+	UNKNOWNCMD
+)
+
 type Header struct {
 	value uint8
 	size  uint64
@@ -37,8 +44,18 @@ func (h *Header) Opcode() uint8 {
 	return h.value >> 4
 }
 
+func (h *Header) SetOpcode(opcode uint8) {
+	h.value &= 0x0F
+	h.value |= ((opcode << 4) & 0xF0)
+}
+
 func (h *Header) Status() uint8 {
 	return h.value >> 6
+}
+
+func (h *Header) SetStatus(status uint8) {
+	h.value &= 0x0F
+	h.value |= ((status << 6) & 0xF0)
 }
 
 func (h Header) MarshalBinary() ([]byte, error) {
