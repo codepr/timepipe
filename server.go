@@ -44,6 +44,21 @@ const (
 	PORT = "4040"
 )
 
+type TimeSeriesOperation struct {
+	Conn       *net.Conn
+	TimeSeries *TimeSeries
+	Operation  TimeSeriesApplicable
+}
+
+type ServerResponse struct {
+	Conn    *net.Conn
+	Payload encoding.BinaryMarshaler
+}
+
+type TimeSeriesApplicable interface {
+	Apply(*TimeSeries) (encoding.BinaryMarshaler, error)
+}
+
 type Server struct {
 	protocol string
 	host     string
@@ -200,21 +215,6 @@ func (s *Server) handleRequest(conn *net.Conn,
 	}
 }
 
-type TimeSeriesOperation struct {
-	Conn       *net.Conn
-	TimeSeries *TimeSeries
-	Operation  TimeSeriesApplicable
-}
-
-type ServerResponse struct {
-	Conn    *net.Conn
-	Payload encoding.BinaryMarshaler
-}
-
-type TimeSeriesApplicable interface {
-	Apply(*TimeSeries) (encoding.BinaryMarshaler, error)
-}
-
 func processRequests(read, write chan *TimeSeriesOperation,
 	out chan ServerResponse) {
 	for {
@@ -233,23 +233,6 @@ func processRequests(read, write chan *TimeSeriesOperation,
 			}
 		}
 	}
-}
-
-func UnmarshalBinary(buf []byte, u encoding.BinaryUnmarshaler) error {
-	return u.UnmarshalBinary(buf)
-}
-
-func MarshalBinary(opcode uint8, m encoding.BinaryMarshaler) ([]byte, error) {
-	bytesarray, err := m.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	header := Header{opcode, uint64(len(bytesarray))}
-	byteshdr, err := header.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	return append(byteshdr, bytesarray...), err
 }
 
 func main() {
