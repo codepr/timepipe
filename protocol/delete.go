@@ -49,9 +49,12 @@ func (d *DeletePacket) UnmarshalBinary(buf []byte) error {
 	return nil
 }
 
-func (d DeletePacket) MarshalBinary() ([]byte, error) {
+func (d *DeletePacket) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	if err := binary.Write(buf, binary.BigEndian, d.Name); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, uint16(len(d.Name))); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buf, binary.BigEndian, []byte(d.Name)); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

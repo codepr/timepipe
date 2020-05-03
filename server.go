@@ -94,7 +94,7 @@ func (s *Server) Run() {
 	ch := make(chan net.Conn)
 
 	// Start single goroutine responsible for timeseries management
-	go processRequests(s.r, s.w, s.out)
+	go s.processRequests()
 
 	// Start goroutine for responses
 	go func() {
@@ -215,18 +215,17 @@ func (s *Server) handleRequest(conn *net.Conn,
 	}
 }
 
-func processRequests(read, write chan *TimeSeriesOperation,
-	out chan ServerResponse) {
+func (s *Server) processRequests() {
 	for {
 		select {
-		case r := <-read:
+		case r := <-s.r:
 			response, err := r.Operation.Apply(r.TimeSeries)
 			if err != nil {
 				// FIXME remove fatal, marshal error
 				log.Fatal(err)
 			}
-			out <- ServerResponse{r.Conn, response}
-		case w := <-write:
+			s.out <- ServerResponse{r.Conn, response}
+		case w := <-s.w:
 			if _, err := w.Operation.Apply(w.TimeSeries); err != nil {
 				// FIXME remove fatal, marshal error
 				log.Fatal(err)

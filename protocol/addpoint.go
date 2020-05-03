@@ -66,7 +66,7 @@ func (a *AddPointPacket) UnmarshalBinary(buf []byte) error {
 }
 
 func (a AddPointPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
-	record := &timeseries.Record{a.Timestamp, a.Value}
+	record := &timeseries.Record{Timestamp: a.Timestamp, Value: a.Value}
 	ts.AddRecord(record)
 	r := Header{}
 	r.SetOpcode(ACK)

@@ -32,7 +32,11 @@ func UnmarshalBinary(buf []byte, u encoding.BinaryUnmarshaler) error {
 	return u.UnmarshalBinary(buf)
 }
 
-func MarshalBinary(opcode uint8, m encoding.BinaryMarshaler) ([]byte, error) {
+func MarshalBinary(m encoding.BinaryMarshaler) ([]byte, error) {
+	return m.MarshalBinary()
+}
+
+func MarshalBinaryFull(opcode uint8, m encoding.BinaryMarshaler) ([]byte, error) {
 	bytesarray, err := m.MarshalBinary()
 	if err != nil {
 		return nil, err

@@ -28,41 +28,43 @@ package protocol
 
 import (
 	"bytes"
-	"encoding/binary"
+	"testing"
 )
 
-type CreatePacket struct {
-	Name      string
-	Retention int64
+func TestMarshalBinaryCreate(t *testing.T) {
+	create := CreatePacket{"test-ts", 3000}
+	b, err := MarshalBinary(&create)
+	if err != nil {
+		t.Errorf("Failed to marshal CREATE packet. Got error %v", err)
+	}
+	expected := []byte{0, 7, 116, 101, 115, 116, 45, 116, 115, 0, 0, 0, 0, 0, 0, 11, 184}
+	res := bytes.Compare(b, expected)
+	if res != 0 {
+		t.Errorf("Failed to marshal CREATE. Expected %v got %v", expected, b)
+	}
+	test := CreatePacket{}
+	UnmarshalBinary(b, &test)
+	if test.Name != create.Name || test.Retention != create.Retention {
+		t.Errorf("Failed to marshal CREATE packet. Expected %v got %v",
+			create, test)
+	}
 }
 
-func (c *CreatePacket) UnmarshalBinary(buf []byte) error {
-	reader := bytes.NewReader(buf)
-	var nameLen uint16 = 0
-	if err := binary.Read(reader, binary.BigEndian, &nameLen); err != nil {
-		return err
+func TestMarshalBinaryDelete(t *testing.T) {
+	delete := DeletePacket{"test-ts"}
+	b, err := MarshalBinary(&delete)
+	if err != nil {
+		t.Errorf("Failed to marshal DELETE packet. Got error %v", err)
 	}
-	name := make([]byte, nameLen)
-	if err := binary.Read(reader, binary.BigEndian, &name); err != nil {
-		return err
+	expected := []byte{0, 7, 116, 101, 115, 116, 45, 116, 115}
+	res := bytes.Compare(b, expected)
+	if res != 0 {
+		t.Errorf("Failed to marshal DELETE. Expected %v got %v", expected, b)
 	}
-	if err := binary.Read(reader, binary.BigEndian, &c.Retention); err != nil {
-		return err
+	test := DeletePacket{}
+	UnmarshalBinary(b, &test)
+	if test.Name != delete.Name {
+		t.Errorf("Failed to marshal DELETE packet. Expected %v got %v",
+			delete, test)
 	}
-	c.Name = string(name)
-	return nil
-}
-
-func (c *CreatePacket) MarshalBinary() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	if err := binary.Write(buf, binary.BigEndian, uint16(len(c.Name))); err != nil {
-		return nil, err
-	}
-	if err := binary.Write(buf, binary.BigEndian, []byte(c.Name)); err != nil {
-		return nil, err
-	}
-	if err := binary.Write(buf, binary.BigEndian, c.Retention); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
