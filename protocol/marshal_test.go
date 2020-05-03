@@ -68,3 +68,22 @@ func TestMarshalBinaryDelete(t *testing.T) {
 			delete, test)
 	}
 }
+
+func TestMarshalBinaryAddPoint(t *testing.T) {
+	add := AddPointPacket{"test-ts", false, 2.29, 0}
+	b, err := MarshalBinary(&add)
+	if err != nil {
+		t.Errorf("Failed to marshal ADDPOINT packet. Got error %v", err)
+	}
+	expected := []byte{0, 7, 116, 101, 115, 116, 45, 116, 115, 0, 64, 2, 81, 235, 133, 30, 184, 82, 0, 0, 0, 0, 0, 0, 0, 0}
+	res := bytes.Compare(b, expected)
+	if res != 0 {
+		t.Errorf("Failed to marshal ADDPOINT. Expected %v got %v", expected, b)
+	}
+	test := AddPointPacket{}
+	UnmarshalBinary(b, &test)
+	if test != add {
+		t.Errorf("Failed to marshal ADDPOINT packet. Expected %v got %v",
+			add, test)
+	}
+}

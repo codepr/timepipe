@@ -65,6 +65,28 @@ func (a *AddPointPacket) UnmarshalBinary(buf []byte) error {
 	return nil
 }
 
+func (a *AddPointPacket) MarshalBinary() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	if err := binary.Write(buf, binary.BigEndian, uint16(len(a.Name))); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buf, binary.BigEndian, []byte(a.Name)); err != nil {
+		return nil, err
+	}
+	data := []interface{}{
+		bool(a.HaveTimestamp),
+		float64(a.Value),
+		int64(a.Timestamp),
+	}
+	for _, v := range data {
+		err := binary.Write(buf, binary.BigEndian, v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
+}
+
 func (a AddPointPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
 	record := &timeseries.Record{Timestamp: a.Timestamp, Value: a.Value}
 	ts.AddRecord(record)
