@@ -28,6 +28,7 @@ package protocol
 
 import (
 	"bytes"
+	"github.com/codepr/timepipe/timeseries"
 	"testing"
 )
 
@@ -104,5 +105,37 @@ func TestMarshalBinaryQuery(t *testing.T) {
 	if test != query {
 		t.Errorf("Failed to marshal DELETE packet. Expected %v got %v",
 			query, test)
+	}
+}
+
+func TestMarshalBinaryQueryResponse(t *testing.T) {
+	response := QueryResponsePacket{
+		Records: []timeseries.Record{
+			timeseries.Record{21424, 98.2},
+			timeseries.Record{28732, 99.42},
+		},
+	}
+	b, err := MarshalBinary(&response)
+	if err != nil {
+		t.Errorf("Failed to marshal QUERYRESPONSE packet. Got error %v", err)
+	}
+	expected := []byte{0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 83, 176, 64, 88, 140, 204, 204, 204, 204, 205, 0, 0, 0, 0, 0, 0, 112, 60, 64, 88, 218, 225, 71, 174, 20, 123}
+	res := bytes.Compare(b, expected)
+	if res != 0 {
+		t.Errorf("Failed to marshal QUERYRESPONSE. Expected %v got %v",
+			expected, b)
+	}
+	test := QueryResponsePacket{}
+	UnmarshalBinary(b, &test)
+	if len(test.Records) != len(response.Records) {
+		t.Errorf("Failed to marshal QUERYRESPONSE packet. Expected %v got %v",
+			response, test)
+	}
+
+	for i := 0; i < len(response.Records); i++ {
+		if test.Records[i] != response.Records[i] {
+			t.Errorf("Failed to marshal QUERYRESPONSE packet. Expected %v got %v",
+				response, test)
+		}
 	}
 }

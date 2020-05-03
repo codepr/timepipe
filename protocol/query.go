@@ -29,11 +29,16 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/codepr/timepipe/timeseries"
 )
 
 type QueryPacket struct {
 	Name  string
 	Flags uint8
+}
+
+type QueryResponsePacket struct {
+	Records []timeseries.Record
 }
 
 func (q *QueryPacket) UnmarshalBinary(buf []byte) error {
@@ -64,6 +69,42 @@ func (q *QueryPacket) MarshalBinary() ([]byte, error) {
 	}
 	if err := binary.Write(buf, binary.BigEndian, q.Flags); err != nil {
 		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (qr *QueryResponsePacket) UnmarshalBinary(buf []byte) error {
+	reader := bytes.NewReader(buf)
+	var results uint64 = 0
+	if err := binary.Read(reader, binary.BigEndian, &results); err != nil {
+		return err
+	}
+	qr.Records = make([]timeseries.Record, results)
+	var i uint64 = 0
+	for ; i < results; i++ {
+		err := binary.Read(reader, binary.BigEndian, &qr.Records[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (qr *QueryResponsePacket) MarshalBinary() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, uint64(len(qr.Records)))
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range qr.Records {
+		err := binary.Write(buf, binary.BigEndian, v.Timestamp)
+		if err != nil {
+			return nil, err
+		}
+		err = binary.Write(buf, binary.BigEndian, v.Value)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return buf.Bytes(), nil
 }
