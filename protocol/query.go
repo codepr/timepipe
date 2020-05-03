@@ -28,71 +28,42 @@ package protocol
 
 import (
 	"bytes"
-	"encoding"
 	"encoding/binary"
-	"github.com/codepr/timepipe/timeseries"
 )
 
-type AddPointPacket struct {
-	Name          string
-	HaveTimestamp bool
-	Value         float64
-	Timestamp     int64
+type QueryPacket struct {
+	Name  string
+	Flags uint8
 }
 
-func (a *AddPointPacket) UnmarshalBinary(buf []byte) error {
-	r := bytes.NewReader(buf)
+func (q *QueryPacket) UnmarshalBinary(buf []byte) error {
+	reader := bytes.NewReader(buf)
 	var nameLen uint16 = 0
-	if err := binary.Read(r, binary.BigEndian, &nameLen); err != nil {
+	if err := binary.Read(reader, binary.BigEndian, &nameLen); err != nil {
 		return err
 	}
 	name := make([]byte, nameLen)
-	if err := binary.Read(r, binary.BigEndian, &name); err != nil {
+	if err := binary.Read(reader, binary.BigEndian, &name); err != nil {
 		return err
 	}
-	if err := binary.Read(r, binary.BigEndian, &a.HaveTimestamp); err != nil {
+	q.Name = string(name)
+	if err := binary.Read(reader, binary.BigEndian, &q.Flags); err != nil {
 		return err
 	}
-	if err := binary.Read(r, binary.BigEndian, &a.Value); err != nil {
-		return err
-	}
-	if a.HaveTimestamp == true {
-		if err := binary.Read(r, binary.BigEndian, &a.Timestamp); err != nil {
-			return err
-		}
-	}
-	a.Name = string(name)
 	return nil
 }
 
-func (a *AddPointPacket) MarshalBinary() ([]byte, error) {
+func (q *QueryPacket) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, uint16(len(a.Name)))
+	err := binary.Write(buf, binary.BigEndian, uint16(len(q.Name)))
 	if err != nil {
 		return nil, err
 	}
-	if err := binary.Write(buf, binary.BigEndian, []byte(a.Name)); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, []byte(q.Name)); err != nil {
 		return nil, err
 	}
-	data := []interface{}{
-		bool(a.HaveTimestamp),
-		float64(a.Value),
-		int64(a.Timestamp),
-	}
-	for _, v := range data {
-		err := binary.Write(buf, binary.BigEndian, v)
-		if err != nil {
-			return nil, err
-		}
+	if err := binary.Write(buf, binary.BigEndian, q.Flags); err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
-}
-
-func (a AddPointPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
-	record := &timeseries.Record{Timestamp: a.Timestamp, Value: a.Value}
-	ts.AddRecord(record)
-	r := Header{}
-	r.SetOpcode(ACK)
-	r.SetStatus(OK)
-	return r, nil
 }

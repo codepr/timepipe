@@ -87,3 +87,22 @@ func TestMarshalBinaryAddPoint(t *testing.T) {
 			add, test)
 	}
 }
+
+func TestMarshalBinaryQuery(t *testing.T) {
+	query := QueryPacket{"test-ts", 0}
+	b, err := MarshalBinary(&query)
+	if err != nil {
+		t.Errorf("Failed to marshal QUERY packet. Got error %v", err)
+	}
+	expected := []byte{0, 7, 116, 101, 115, 116, 45, 116, 115, 0}
+	res := bytes.Compare(b, expected)
+	if res != 0 {
+		t.Errorf("Failed to marshal QUERY. Expected %v got %v", expected, b)
+	}
+	test := QueryPacket{}
+	UnmarshalBinary(b, &test)
+	if test != query {
+		t.Errorf("Failed to marshal DELETE packet. Expected %v got %v",
+			query, test)
+	}
+}
