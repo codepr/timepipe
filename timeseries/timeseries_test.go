@@ -24,7 +24,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package timeseries
 
 import (
 	"testing"
@@ -44,7 +44,7 @@ func TestTimeSeriesAddPoint(t *testing.T) {
 	if len(ts.Records) != 1 {
 		t.Errorf("Failed to add new point to TimeSeries")
 	}
-	if ts.Records[0].value != 98.2 || record.value != 98.2 {
+	if ts.Records[0].Value != 98.2 || record.Value != 98.2 {
 		t.Errorf("Failed to add new point to TimeSeries")
 	}
 }
@@ -68,8 +68,8 @@ func TestTimeSeriesMax(t *testing.T) {
 	ts.AddPoint(98.22)
 	ts.AddPoint(91.2)
 	max, _ := ts.Max()
-	if max.value != 106.2 {
-		t.Errorf("Wrong maximum calculated, expected %v got %v", 106.2, max.value)
+	if max.Value != 106.2 {
+		t.Errorf("Wrong maximum calculated, expected %v got %v", 106.2, max.Value)
 	}
 }
 
@@ -80,8 +80,8 @@ func TestTimeSeriesMin(t *testing.T) {
 	ts.AddPoint(98.22)
 	ts.AddPoint(91.2)
 	min, _ := ts.Min()
-	if min.value != 91.2 {
-		t.Errorf("Wrong maximum calculated, expected %v got %v", 91.2, min.value)
+	if min.Value != 91.2 {
+		t.Errorf("Wrong maximum calculated, expected %v got %v", 91.2, min.Value)
 	}
 }
 
@@ -92,9 +92,9 @@ func TestTimeSeriesFirst(t *testing.T) {
 	ts.AddPoint(98.22)
 	ts.AddPoint(91.2)
 	first, _ := ts.First()
-	if first.value != 98.2 {
+	if first.Value != 98.2 {
 		t.Errorf("Wrong maximum calculated, expected %v got %v",
-			91.2, first.value)
+			91.2, first.Value)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestTimeSeriesLast(t *testing.T) {
 	ts.AddPoint(98.22)
 	ts.AddPoint(91.2)
 	last, _ := ts.Last()
-	if last.value != 91.2 {
+	if last.Value != 91.2 {
 		t.Errorf("Wrong maximum calculated, expected %v got %v", 91.2, last)
 	}
 }
@@ -137,7 +137,7 @@ func TestTimeSeriesFind(t *testing.T) {
 	ts.AddPoint(65.98)
 	ts.AddPoint(77.0)
 	record, _ := ts.Find(start.Timestamp)
-	if record == nil || record.value != 106.2 {
+	if record == nil || record.Value != 106.2 {
 		t.Errorf("Find failed")
 	}
 }

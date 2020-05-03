@@ -24,7 +24,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package timeseries
 
 import (
 	"errors"
@@ -39,7 +39,7 @@ var (
 // value
 type Record struct {
 	Timestamp int64
-	value     float64
+	Value     float64
 }
 
 // TimeSeries represents a time series, essentially an append-only log of point
@@ -82,7 +82,7 @@ func (ts *TimeSeries) Average() (float64, error) {
 	}
 	var sum float64 = 0.0
 	for _, v := range ts.Records {
-		sum += v.value
+		sum += v.Value
 	}
 	return sum / float64(len(ts.Records)), nil
 }
@@ -93,7 +93,7 @@ func (ts *TimeSeries) Max() (*Record, error) {
 	}
 	max := ts.Records[0]
 	for _, v := range ts.Records {
-		if v.value > max.value {
+		if v.Value > max.Value {
 			max = v
 		}
 	}
@@ -106,7 +106,7 @@ func (ts *TimeSeries) Min() (*Record, error) {
 	}
 	min := ts.Records[0]
 	for _, v := range ts.Records {
-		if v.value < min.value {
+		if v.Value < min.Value {
 			min = v
 		}
 	}
@@ -182,7 +182,7 @@ func (ts *TimeSeries) AverageInterval(interval_ms int64) ([]Record, error) {
 		total = 0
 		for _, r := range ts.Records {
 			if r.Timestamp > current-interval && r.Timestamp < current {
-				sum += r.value
+				sum += r.Value
 				total += 1
 			}
 		}
