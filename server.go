@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 const (
@@ -20,6 +21,8 @@ type Server struct {
 	host     string
 	port     string
 	db       *sync.Map
+	rw       chan *TimeSeriesOperation
+	out      chan ServerResponse
 }
 
 func NewServer(protocol, host, port string) *Server {
@@ -28,6 +31,8 @@ func NewServer(protocol, host, port string) *Server {
 		host:     host,
 		port:     port,
 		db:       new(sync.Map),
+		rw:       make(chan *TimeSeriesOperation),
+		out:      make(chan ServerResponse),
 	}
 }
 
@@ -42,6 +47,25 @@ func (s *Server) Run() {
 	log.Print("Listening on " + s.host + ":" + s.port)
 
 	ch := make(chan net.Conn)
+
+	// Start single goroutine responsible for timeseries management
+	go processRequests(s.rw, s.out)
+
+	// Start goroutine for responses
+	go func() {
+		for {
+			response := <-s.out
+			data, err := response.Payload.MarshalBinary()
+			if err != nil {
+				log.Print(err)
+				return
+			}
+			_, err = (*response.Conn).Write(data)
+			if err != nil {
+				log.Print("Error sending response")
+			}
+		}
+	}()
 
 	// Scale on accept
 	go func() {
@@ -82,22 +106,13 @@ func (s *Server) serveConn(conn net.Conn) {
 			log.Print("Can't unmarshal header:", err)
 			return
 		}
-		response := s.handleRequest(rw, header)
-		data, err := response.MarshalBinary()
-		if err != nil {
-			log.Print(err)
-			return
-		}
-		_, err = conn.Write(data)
-		if err != nil {
-			log.Print("Error sending response")
-		}
+		s.handleRequest(&conn, rw, header)
 	}
 }
 
-func (s *Server) handleRequest(rw *bufio.ReadWriter,
-	h *Header) encoding.BinaryMarshaler {
-	response := Header{ACK, 0}
+func (s *Server) handleRequest(conn *net.Conn, rw *bufio.ReadWriter, h *Header) {
+	response := Header{}
+	response.SetOpcode(ACK)
 	// Read the bytes left, a.k.a. payload of the request
 	buf := make([]byte, h.Len())
 	if _, err := io.ReadAtLeast(rw, buf, int(h.Len())); err != nil {
@@ -115,6 +130,7 @@ func (s *Server) handleRequest(rw *bufio.ReadWriter,
 		} else {
 			log.Println("Created new timeseries named " + timeseries.Name)
 		}
+		s.out <- ServerResponse{conn, response}
 	case DELETE:
 		delete := &CreatePacket{}
 		if err := UnmarshalBinary(buf, delete); err != nil {
@@ -122,16 +138,54 @@ func (s *Server) handleRequest(rw *bufio.ReadWriter,
 		}
 		s.db.Delete(delete.Name)
 		log.Println("Deleted timeseries named " + delete.Name)
+		s.out <- ServerResponse{conn, response}
 	case ADDPOINT:
-		// TODO
+		add := &AddPointPacket{}
+		if err := UnmarshalBinary(buf, add); err != nil {
+			log.Fatal("UnmarshalBinary: ", err)
+		}
+		if add.HaveTimestamp == false {
+			add.Timestamp = time.Now().UnixNano()
+		}
+		log.Println(add)
 	case MADDPOINT:
+		log.Println("Received MADDPOINT")
 		// TODO
 	case QUERY:
+		log.Println("Received QUERY")
 		// TODO
 	default:
+		response.SetStatus(UNKNOWNCMD)
+		s.out <- ServerResponse{conn, response}
 		// TODO
 	}
-	return response
+}
+
+type TimeSeriesOperation struct {
+	Conn       *net.Conn
+	TimeSeries *TimeSeries
+	Operation  TimeSeriesApplicable
+}
+
+type ServerResponse struct {
+	Conn    *net.Conn
+	Payload encoding.BinaryMarshaler
+}
+
+type TimeSeriesApplicable interface {
+	Apply(*TimeSeries) (encoding.BinaryMarshaler, error)
+}
+
+func processRequests(rw chan *TimeSeriesOperation, out chan ServerResponse) {
+	for {
+		op := <-rw
+		response, err := op.Operation.Apply(op.TimeSeries)
+		if err != nil {
+			// FIXME remove fatal, marshal error
+			log.Fatal(err)
+		}
+		out <- ServerResponse{op.Conn, response}
+	}
 }
 
 func main() {

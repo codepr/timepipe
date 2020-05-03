@@ -36,6 +36,13 @@ type DeletePacket struct {
 	Name string
 }
 
+type AddPointPacket struct {
+	Name          string
+	HaveTimestamp bool
+	Value         float64
+	Timestamp     int64
+}
+
 func (h *Header) Len() uint64 {
 	return h.size
 }
@@ -73,13 +80,11 @@ func (h *Header) UnmarshalBinary(buf []byte) error {
 	if err := binary.Read(b, binary.BigEndian, &value); err != nil {
 		return err
 	}
-
 	// Read payload len in bytes
 	var size uint64
 	if err := binary.Read(b, binary.BigEndian, &size); err != nil {
 		return err
 	}
-
 	h.value = value
 	h.size = size
 	return nil
@@ -133,6 +138,31 @@ func (d DeletePacket) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (a *AddPointPacket) UnmarshalBinary(buf []byte) error {
+	r := bytes.NewReader(buf)
+	var nameLen uint16 = 0
+	if err := binary.Read(r, binary.BigEndian, &nameLen); err != nil {
+		return err
+	}
+	name := make([]byte, nameLen)
+	if err := binary.Read(r, binary.BigEndian, &name); err != nil {
+		return err
+	}
+	if err := binary.Read(r, binary.BigEndian, &a.HaveTimestamp); err != nil {
+		return err
+	}
+	if err := binary.Read(r, binary.BigEndian, &a.Value); err != nil {
+		return err
+	}
+	if a.HaveTimestamp == true {
+		if err := binary.Read(r, binary.BigEndian, &a.Timestamp); err != nil {
+			return err
+		}
+	}
+	a.Name = string(name)
+	return nil
 }
 
 func UnmarshalBinary(buf []byte, u encoding.BinaryUnmarshaler) error {
