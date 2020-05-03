@@ -21,7 +21,8 @@ type Server struct {
 	host     string
 	port     string
 	db       *sync.Map
-	rw       chan *TimeSeriesOperation
+	r        chan *TimeSeriesOperation
+	w        chan *TimeSeriesOperation
 	out      chan ServerResponse
 }
 
@@ -31,7 +32,8 @@ func NewServer(protocol, host, port string) *Server {
 		host:     host,
 		port:     port,
 		db:       new(sync.Map),
-		rw:       make(chan *TimeSeriesOperation),
+		r:        make(chan *TimeSeriesOperation),
+		w:        make(chan *TimeSeriesOperation),
 		out:      make(chan ServerResponse),
 	}
 }
@@ -49,7 +51,7 @@ func (s *Server) Run() {
 	ch := make(chan net.Conn)
 
 	// Start single goroutine responsible for timeseries management
-	go processRequests(s.rw, s.out)
+	go processRequests(s.r, s.w, s.out)
 
 	// Start goroutine for responses
 	go func() {
@@ -130,6 +132,7 @@ func (s *Server) handleRequest(conn *net.Conn, rw *bufio.ReadWriter, h *Header) 
 		} else {
 			log.Println("Created new timeseries named " + timeseries.Name)
 		}
+		response.SetStatus(ACCEPTED)
 		s.out <- ServerResponse{conn, response}
 	case DELETE:
 		delete := &CreatePacket{}
@@ -138,16 +141,23 @@ func (s *Server) handleRequest(conn *net.Conn, rw *bufio.ReadWriter, h *Header) 
 		}
 		s.db.Delete(delete.Name)
 		log.Println("Deleted timeseries named " + delete.Name)
+		response.SetStatus(ACCEPTED)
 		s.out <- ServerResponse{conn, response}
 	case ADDPOINT:
-		add := &AddPointPacket{}
-		if err := UnmarshalBinary(buf, add); err != nil {
+		add := AddPointPacket{}
+		if err := UnmarshalBinary(buf, &add); err != nil {
 			log.Fatal("UnmarshalBinary: ", err)
 		}
 		if add.HaveTimestamp == false {
 			add.Timestamp = time.Now().UnixNano()
 		}
-		log.Println(add)
+		ts, ok := s.db.Load(add.Name)
+		if !ok {
+			response.SetStatus(TSNOTFOUND)
+			s.out <- ServerResponse{conn, response}
+		} else {
+			s.w <- &TimeSeriesOperation{conn, ts.(*TimeSeries), add}
+		}
 	case MADDPOINT:
 		log.Println("Received MADDPOINT")
 		// TODO
@@ -176,15 +186,23 @@ type TimeSeriesApplicable interface {
 	Apply(*TimeSeries) (encoding.BinaryMarshaler, error)
 }
 
-func processRequests(rw chan *TimeSeriesOperation, out chan ServerResponse) {
+func processRequests(read, write chan *TimeSeriesOperation,
+	out chan ServerResponse) {
 	for {
-		op := <-rw
-		response, err := op.Operation.Apply(op.TimeSeries)
-		if err != nil {
-			// FIXME remove fatal, marshal error
-			log.Fatal(err)
+		select {
+		case r := <-read:
+			response, err := r.Operation.Apply(r.TimeSeries)
+			if err != nil {
+				// FIXME remove fatal, marshal error
+				log.Fatal(err)
+			}
+			out <- ServerResponse{r.Conn, response}
+		case w := <-write:
+			if _, err := w.Operation.Apply(w.TimeSeries); err != nil {
+				// FIXME remove fatal, marshal error
+				log.Fatal(err)
+			}
 		}
-		out <- ServerResponse{op.Conn, response}
 	}
 }
 

@@ -72,6 +72,10 @@ func (ts *TimeSeries) AddPoint(value float64) Record {
 	return *record
 }
 
+func (ts *TimeSeries) AddRecord(record *Record) {
+	ts.Records = append(ts.Records, record)
+}
+
 func (ts *TimeSeries) Average() (float64, error) {
 	if len(ts.Records) == 0 {
 		return 0.0, EmptyTimeSeriesErr

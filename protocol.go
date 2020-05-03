@@ -17,6 +17,7 @@ const (
 
 const (
 	OK = iota
+	ACCEPTED
 	TSNOTFOUND
 	TSEXISTS
 	UNKNOWNCMD
@@ -163,6 +164,15 @@ func (a *AddPointPacket) UnmarshalBinary(buf []byte) error {
 	}
 	a.Name = string(name)
 	return nil
+}
+
+func (a AddPointPacket) Apply(ts *TimeSeries) (encoding.BinaryMarshaler, error) {
+	record := &Record{a.Timestamp, a.Value}
+	ts.AddRecord(record)
+	r := Header{}
+	r.SetOpcode(ACK)
+	r.SetStatus(OK)
+	return r, nil
 }
 
 func UnmarshalBinary(buf []byte, u encoding.BinaryUnmarshaler) error {
