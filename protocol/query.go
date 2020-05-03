@@ -28,6 +28,7 @@ package protocol
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/binary"
 	"github.com/codepr/timepipe/timeseries"
 )
@@ -71,6 +72,15 @@ func (q *QueryPacket) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (q *QueryPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
+	qr := &QueryResponsePacket{}
+	qr.Records = make([]timeseries.Record, len(ts.Records))
+	for i, v := range ts.Records {
+		qr.Records[i] = *v
+	}
+	return qr, nil
 }
 
 func (qr *QueryResponsePacket) UnmarshalBinary(buf []byte) error {

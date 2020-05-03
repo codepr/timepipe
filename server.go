@@ -200,9 +200,22 @@ func (s *Server) handleRequest(conn *net.Conn,
 			response.SetStatus(TSNOTFOUND)
 			s.out <- ServerResponse{conn, response}
 		} else {
-			s.w <- &TimeSeriesOperation{conn, ts.(*TimeSeries), add}
+			s.w <- &TimeSeriesOperation{conn, ts.(*TimeSeries), &add}
 		}
 	case MADDPOINT:
+		query := QueryPacket{}
+		if err := UnmarshalBinary(buf, &query); err != nil {
+			log.Fatal("UnmarshalBinary: ", err)
+		}
+		ts, ok := s.db.Load(query.Name)
+		if !ok {
+			response := Header{}
+			response.SetOpcode(QUERYRESPONSE)
+			response.SetStatus(TSNOTFOUND)
+			s.out <- ServerResponse{conn, response}
+		} else {
+			s.r <- &TimeSeriesOperation{conn, ts.(*TimeSeries), &query}
+		}
 		log.Println("Received MADDPOINT")
 		// TODO
 	case QUERY:

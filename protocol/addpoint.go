@@ -88,7 +88,7 @@ func (a *AddPointPacket) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (a AddPointPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
+func (a *AddPointPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
 	record := &timeseries.Record{Timestamp: a.Timestamp, Value: a.Value}
 	ts.AddRecord(record)
 	r := Header{}
