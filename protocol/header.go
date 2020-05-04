@@ -49,6 +49,8 @@ const (
 	UNKNOWNCMD
 )
 
+type AckResponse = Header
+
 type Header struct {
 	Value uint8
 	Size  uint64

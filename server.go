@@ -157,7 +157,7 @@ func (s *Server) serveConn(conn net.Conn) {
 
 func (s *Server) handleRequest(conn *net.Conn,
 	rw *bufio.ReadWriter, h *Header) {
-	response := Header{}
+	response := AckResponse{}
 	response.SetOpcode(ACK)
 	// Read the bytes left, a.k.a. payload of the request
 	buf := make([]byte, h.Len())
@@ -214,7 +214,7 @@ func (s *Server) handleRequest(conn *net.Conn,
 		}
 		ts, ok := s.db.Load(query.Name)
 		if !ok {
-			response := Header{}
+			response := AckResponse{}
 			response.SetOpcode(QUERYRESPONSE)
 			response.SetStatus(TSNOTFOUND)
 			s.out <- ServerResponse{conn, response}
