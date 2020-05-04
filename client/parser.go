@@ -63,6 +63,8 @@ type timeseries struct {
 type Command struct {
 	Type       int
 	TimeSeries timeseries
+	Timestamp  int64
+	Value      float64
 	Range      timerange
 }
 
@@ -102,15 +104,14 @@ func (p *parser) Parse() (Command, error) {
 	if err != nil {
 		return command, err
 	}
+	ts := timeseries{}
 	switch strings.ToUpper(token) {
 	case "CREATE":
 		command.Type = CREATE
-		ts := timeseries{}
-		token, err = p.pop()
+		ts.Name, err = p.pop()
 		if err != nil {
 			return command, nil
 		}
-		ts.Name = token
 		token, err = p.pop()
 		if err != nil {
 			ts.Retention = 0
@@ -122,15 +123,37 @@ func (p *parser) Parse() (Command, error) {
 		command.TimeSeries = ts
 	case "DELETE":
 		command.Type = DELETE
-		ts := timeseries{}
-		token, err = p.pop()
+		ts.Name, err = p.pop()
 		if err != nil {
 			return command, nil
 		}
-		ts.Name = token
 		command.TimeSeries = ts
 	case "ADD":
 		command.Type = ADD
+		ts.Name, err = p.pop()
+		if err != nil {
+			return command, nil
+		}
+		token, err := p.pop()
+		if err != nil {
+			return command, nil
+		}
+		if token == "*" {
+			command.Timestamp = 0
+		} else {
+			command.Timestamp, err = strconv.ParseInt(token, 10, 64)
+			if err != nil {
+				return command, err
+			}
+		}
+		token, err = p.pop()
+		if err != nil {
+			return command, err
+		}
+		if command.Value, err = strconv.ParseFloat(token, 64); err != nil {
+			return command, err
+		}
+		command.TimeSeries = ts
 	case "MADD":
 		command.Type = MADD
 	case "QUERY":

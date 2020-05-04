@@ -26,7 +26,11 @@
 
 package client
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+	"time"
+)
 
 func TestParseCreate(t *testing.T) {
 	parser := NewParser("CREATE ts-test 3000")
@@ -45,7 +49,7 @@ func TestParseCreateWithNoRetention(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse CREATE query")
 	}
-	expected := Command{CREATE, timeseries{"ts-test", 0}, timerange{}}
+	expected := Command{CREATE, timeseries{"ts-test", 0}, 0, 0, timerange{}}
 	if command != expected {
 		t.Errorf("Failed to parse CREATE query")
 	}
@@ -59,5 +63,30 @@ func TestParseDelete(t *testing.T) {
 	}
 	if command.Type != DELETE || command.TimeSeries.Name != "ts-test" {
 		t.Errorf("Failed to parse DELETE query")
+	}
+}
+
+func TestParseAdd(t *testing.T) {
+	parser := NewParser("ADD ts-test * 12.2")
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse ADD query")
+	}
+	expected := Command{ADD, timeseries{"ts-test", 0}, 0, 12.2, timerange{}}
+	if command != expected {
+		t.Errorf("Failed to parse ADD query")
+	}
+}
+
+func TestParseAddWithTimestamp(t *testing.T) {
+	now := time.Now().UnixNano()
+	parser := NewParser("ADD ts-test " + strconv.FormatInt(now, 10) + " 12.2")
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse ADD query")
+	}
+	expected := Command{ADD, timeseries{"ts-test", 0}, now, 12.2, timerange{}}
+	if command != expected {
+		t.Errorf("Failed to parse ADD query")
 	}
 }
