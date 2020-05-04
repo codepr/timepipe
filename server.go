@@ -192,17 +192,22 @@ func (s *Server) handleRequest(conn *net.Conn,
 		if err := UnmarshalBinary(buf, &add); err != nil {
 			log.Fatal("UnmarshalBinary: ", err)
 		}
+		log.Println("Received ADDPOINT on " + add.Name)
 		if add.HaveTimestamp == false {
 			add.Timestamp = time.Now().UnixNano()
 		}
 		ts, ok := s.db.Load(add.Name)
 		if !ok {
 			response.SetStatus(TSNOTFOUND)
-			s.out <- ServerResponse{conn, response}
 		} else {
 			s.w <- &TimeSeriesOperation{conn, ts.(*TimeSeries), &add}
+			response.SetStatus(ACCEPTED)
 		}
+		s.out <- ServerResponse{conn, response}
 	case MADDPOINT:
+		log.Println("Received MADDPOINT")
+		// TODO
+	case QUERY:
 		query := QueryPacket{}
 		if err := UnmarshalBinary(buf, &query); err != nil {
 			log.Fatal("UnmarshalBinary: ", err)
@@ -216,11 +221,6 @@ func (s *Server) handleRequest(conn *net.Conn,
 		} else {
 			s.r <- &TimeSeriesOperation{conn, ts.(*TimeSeries), &query}
 		}
-		log.Println("Received MADDPOINT")
-		// TODO
-	case QUERY:
-		log.Println("Received QUERY")
-		// TODO
 	default:
 		response.SetStatus(UNKNOWNCMD)
 		s.out <- ServerResponse{conn, response}
