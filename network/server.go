@@ -24,24 +24,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package network
 
 import (
 	"bufio"
 	"encoding"
-	. "github.com/codepr/timepipe/protocol"
+	. "github.com/codepr/timepipe/network/protocol"
 	. "github.com/codepr/timepipe/timeseries"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"time"
-)
-
-const (
-	TYPE = "tcp"
-	HOST = "localhost"
-	PORT = "4040"
 )
 
 type TimeSeriesOperation struct {
@@ -245,9 +239,4 @@ func (s *Server) processRequests() {
 			}
 		}
 	}
-}
-
-func main() {
-	server := NewServer(TYPE, HOST, PORT)
-	server.Run()
 }
