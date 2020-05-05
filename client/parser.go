@@ -158,6 +158,49 @@ func (p *parser) Parse() (Command, error) {
 		command.Type = MADD
 	case "QUERY":
 		command.Type = QUERY
+		ts.Name, err = p.pop()
+		if err != nil {
+			return command, err
+		}
+		token, err = p.pop()
+		if token != "*" {
+			switch strings.ToUpper(token) {
+			case "<":
+				endTs, err := p.pop()
+				if err != nil {
+					return command, err
+				}
+				if command.Range.end, err = strconv.ParseInt(endTs, 10, 64); err != nil {
+					return command, err
+				}
+			case ">":
+				startTs, err := p.pop()
+				if err != nil {
+					return command, err
+				}
+				if command.Range.start, err = strconv.ParseInt(startTs, 10, 64); err != nil {
+					return command, err
+				}
+			case "RANGE":
+				startTs, err := p.pop()
+				if err != nil {
+					return command, err
+				}
+				endTs, err := p.pop()
+				if err != nil {
+					return command, err
+				}
+				if command.Range.start, err = strconv.ParseInt(startTs, 10, 64); err != nil {
+					return command, err
+				}
+				if command.Range.end, err = strconv.ParseInt(endTs, 10, 64); err != nil {
+					return command, err
+				}
+			default:
+				return command, UnknownCommandErr
+			}
+		}
+		command.TimeSeries = ts
 	default:
 		return command, UnknownCommandErr
 	}

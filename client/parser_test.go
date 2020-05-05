@@ -90,3 +90,56 @@ func TestParseAddWithTimestamp(t *testing.T) {
 		t.Errorf("Failed to parse ADD query")
 	}
 }
+
+func TestParseQuery(t *testing.T) {
+	parser := NewParser("QUERY ts-test *")
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse QUERY query")
+	}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{}}
+	if command != expected {
+		t.Errorf("Failed to parse QUERY query")
+	}
+}
+
+func TestParseQueryWithMajorOf(t *testing.T) {
+	now := time.Now().UnixNano()
+	parser := NewParser("QUERY ts-test > " + strconv.FormatInt(now, 10))
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse QUERY query")
+	}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, 0}}
+	if command != expected {
+		t.Errorf("Failed to parse QUERY query, expected %v got %v",
+			expected, command)
+	}
+}
+
+func TestParseQueryWithMinorOf(t *testing.T) {
+	now := time.Now().UnixNano()
+	parser := NewParser("QUERY ts-test < " + strconv.FormatInt(now, 10))
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse QUERY query")
+	}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{0, now}}
+	if command != expected {
+		t.Errorf("Failed to parse QUERY query")
+	}
+}
+
+func TestParseQueryWithRange(t *testing.T) {
+	now := time.Now().UnixNano()
+	then := now + 1e9
+	parser := NewParser("QUERY ts-test RANGE " + strconv.FormatInt(now, 10) + " " + strconv.FormatInt(then, 10))
+	command, err := parser.Parse()
+	if err != nil {
+		t.Errorf("Failed to parse QUERY query")
+	}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, then}}
+	if command != expected {
+		t.Errorf("Failed to parse QUERY query")
+	}
+}
