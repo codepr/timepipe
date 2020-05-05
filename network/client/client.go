@@ -26,15 +26,123 @@
 
 package client
 
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"net"
+
+	"github.com/codepr/timepipe/network/protocol"
+)
+
 type Client struct {
 	host, port string
+	conn       net.Conn
+	rw         *bufio.ReadWriter
 }
 
-func NewTimepipeClient(host, port string) Client {
-	return Client{host, port}
+func NewTimepipeClient(network, host, port string) (*Client, error) {
+	conn, err := net.Dial(network, host+":"+port)
+	if err != nil {
+		return nil, err
+	}
+	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	return &Client{host, port, conn, rw}, nil
 }
 
 func (c *Client) SendCommand(cmdString string) (string, error) {
-	// TODO
-	return "", nil
+	var response string = ""
+	parser := NewParser(cmdString)
+	command, err := parser.Parse()
+	if err != nil {
+		return "", err
+	}
+	var payload []byte
+	header := protocol.Header{}
+	header.SetOpcode(uint8(command.Type))
+	switch command.Type {
+	case CREATE:
+		packet := protocol.CreatePacket{}
+		packet.Name = command.TimeSeries.Name
+		packet.Retention = command.TimeSeries.Retention
+		payload, err = packet.MarshalBinary()
+		if err != nil {
+			return "", err
+		}
+	case DELETE:
+		packet := protocol.DeletePacket{}
+		packet.Name = command.TimeSeries.Name
+		payload, err = packet.MarshalBinary()
+		if err != nil {
+			return "", err
+		}
+	case ADD:
+		packet := protocol.AddPointPacket{}
+		packet.Name = command.TimeSeries.Name
+		packet.HaveTimestamp = command.Timestamp != 0
+		packet.Value = command.Value
+		payload, err = packet.MarshalBinary()
+		if err != nil {
+			return "", err
+		}
+	case QUERY:
+		packet := protocol.QueryPacket{}
+		packet.Name = command.TimeSeries.Name
+		packet.Flags = 0
+		payload, err = packet.MarshalBinary()
+		if err != nil {
+			return "", err
+		}
+		// TODO
+	}
+	header.Size = uint64(len(payload))
+	headerBytes, err := header.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+	packetBytes := append(headerBytes, payload...)
+	_, err = c.conn.Write(packetBytes)
+	if err != nil {
+		return "", err
+	}
+	buf := make([]byte, 9)
+	if _, err := io.ReadAtLeast(c.rw, buf, 9); err != nil {
+		return "", err
+	}
+	responseHeader := protocol.Header{}
+	if err := responseHeader.UnmarshalBinary(buf); err != nil {
+		return "", err
+	}
+	payloadBuf := make([]byte, responseHeader.Len())
+	if responseHeader.Opcode() == protocol.ACK {
+		ack := protocol.AckResponse{}
+		if err := ack.UnmarshalBinary(payloadBuf); err != nil {
+			return "", err
+		}
+		switch ack.Status() {
+		case protocol.OK:
+			response = "OK"
+		case protocol.ACCEPTED:
+			response = "ACCEPTED"
+		case protocol.TSEXISTS:
+			response = "Timeseries already exists"
+		case protocol.TSNOTFOUND:
+			response = "Timeseries not found"
+		case protocol.UNKNOWNCMD:
+			response = "Unknown command"
+		}
+	} else {
+		res := protocol.QueryResponsePacket{}
+		if err := res.UnmarshalBinary(payloadBuf); err != nil {
+			return "", err
+		}
+		for i := 0; i < len(res.Records); i++ {
+			response += fmt.Sprintf("%v %f", res.Records[i].Timestamp, res.Records[i].Value)
+		}
+	}
+	return response, nil
+}
+
+func (c *Client) Close() {
+	c.conn.Close()
 }

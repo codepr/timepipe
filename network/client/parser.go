@@ -57,7 +57,7 @@ type timerange struct {
 
 type timeseries struct {
 	Name      string
-	Retention int
+	Retention int64
 }
 
 type Command struct {
@@ -116,7 +116,7 @@ func (p *parser) Parse() (Command, error) {
 		if err != nil {
 			ts.Retention = 0
 		} else {
-			if ts.Retention, err = strconv.Atoi(token); err != nil {
+			if ts.Retention, err = strconv.ParseInt(token, 10, 64); err != nil {
 				return command, err
 			}
 		}

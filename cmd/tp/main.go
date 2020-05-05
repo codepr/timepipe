@@ -35,16 +35,20 @@ import (
 )
 
 const (
+	NET  = "tcp"
 	HOST = "localhost"
 	PORT = "4040"
 )
 
 func prompt(host, port string) {
-	fmt.Printf("%s:%s>", host, port)
+	fmt.Printf("%s:%s> ", host, port)
 }
 
 func main() {
-	tpClient := client.NewTimepipeClient(HOST, PORT)
+	tpClient, err := client.NewTimepipeClient(NET, HOST, PORT)
+	if err != nil {
+		panic(err)
+	}
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		prompt(HOST, PORT)
@@ -53,6 +57,10 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		cmdString = strings.TrimSuffix(cmdString, "\n")
+		if strings.ToUpper(cmdString) == "QUIT" {
+			tpClient.Close()
+			break
+		}
 		if response, err := tpClient.SendCommand(cmdString); err != nil {
 			fmt.Errorf("Err: %v", err)
 		} else {
