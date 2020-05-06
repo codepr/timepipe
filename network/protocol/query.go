@@ -80,7 +80,11 @@ func (q *QueryPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler
 	for i, v := range ts.Records {
 		qr.Records[i] = *v
 	}
-	return qr, nil
+	header := Header{}
+	header.SetOpcode(QUERYRESPONSE)
+	header.SetStatus(OK)
+	response := &Response{header, qr}
+	return response, nil
 }
 
 func (qr *QueryResponsePacket) UnmarshalBinary(buf []byte) error {

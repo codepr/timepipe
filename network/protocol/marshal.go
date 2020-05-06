@@ -28,6 +28,11 @@ package protocol
 
 import "encoding"
 
+type Response struct {
+	header  Header
+	payload encoding.BinaryMarshaler
+}
+
 func UnmarshalBinary(buf []byte, u encoding.BinaryUnmarshaler) error {
 	return u.UnmarshalBinary(buf)
 }
@@ -47,4 +52,17 @@ func MarshalBinaryFull(opcode uint8, m encoding.BinaryMarshaler) ([]byte, error)
 		return nil, err
 	}
 	return append(byteshdr, bytesarray...), err
+}
+
+func (r *Response) MarshalBinary() ([]byte, error) {
+	payloadBytes, err := r.payload.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	r.header.Size = uint64(len(payloadBytes))
+	headerBytes, err := r.header.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	return append(headerBytes, payloadBytes...), nil
 }

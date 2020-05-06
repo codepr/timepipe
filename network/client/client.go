@@ -113,7 +113,6 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 	if err := responseHeader.UnmarshalBinary(buf); err != nil {
 		return "", err
 	}
-	fmt.Println(responseHeader)
 	if responseHeader.Opcode() == protocol.ACK {
 		switch responseHeader.Status() {
 		case protocol.OK:
@@ -137,7 +136,7 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 			return "", err
 		}
 		for i := 0; i < len(res.Records); i++ {
-			response += fmt.Sprintf("%v %f", res.Records[i].Timestamp, res.Records[i].Value)
+			response += fmt.Sprintf("%v %f\n", res.Records[i].Timestamp, res.Records[i].Value)
 		}
 	}
 	return response, nil
