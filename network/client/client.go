@@ -113,13 +113,9 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 	if err := responseHeader.UnmarshalBinary(buf); err != nil {
 		return "", err
 	}
-	payloadBuf := make([]byte, responseHeader.Len())
+	fmt.Println(responseHeader)
 	if responseHeader.Opcode() == protocol.ACK {
-		ack := protocol.AckResponse{}
-		if err := ack.UnmarshalBinary(payloadBuf); err != nil {
-			return "", err
-		}
-		switch ack.Status() {
+		switch responseHeader.Status() {
 		case protocol.OK:
 			response = "OK"
 		case protocol.ACCEPTED:
@@ -132,6 +128,10 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 			response = "Unknown command"
 		}
 	} else {
+		payloadBuf := make([]byte, responseHeader.Len())
+		if _, err := io.ReadAtLeast(c.rw, payloadBuf, len(payloadBuf)); err != nil {
+			return "", err
+		}
 		res := protocol.QueryResponsePacket{}
 		if err := res.UnmarshalBinary(payloadBuf); err != nil {
 			return "", err

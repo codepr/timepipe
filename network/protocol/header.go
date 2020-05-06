@@ -52,7 +52,7 @@ const (
 type AckResponse = Header
 
 type Header struct {
-	Value uint8
+	Value byte
 	Size  uint64
 }
 
@@ -60,22 +60,21 @@ func (h *Header) Len() uint64 {
 	return h.Size
 }
 
-func (h *Header) Opcode() uint8 {
+func (h *Header) Opcode() byte {
 	return h.Value >> 4
 }
 
-func (h *Header) SetOpcode(opcode uint8) {
+func (h *Header) SetOpcode(opcode byte) {
 	h.Value &= 0x0F
 	h.Value |= ((opcode << 4) & 0xF0)
 }
 
-func (h *Header) Status() uint8 {
-	return h.Value >> 6
+func (h *Header) Status() byte {
+	return h.Value >> 1 & 0x03
 }
 
-func (h *Header) SetStatus(status uint8) {
-	h.Value &= 0x0F
-	h.Value |= ((status << 6) & 0xF0)
+func (h *Header) SetStatus(status byte) {
+	h.Value |= status << 1
 }
 
 func (h Header) MarshalBinary() ([]byte, error) {

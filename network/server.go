@@ -167,10 +167,11 @@ func (s *Server) handleRequest(conn *net.Conn,
 		timeseries := NewTimeSeries(create.Name, create.Retention)
 		if _, ok := s.db.LoadOrStore(create.Name, timeseries); ok {
 			log.Println("Timeseries named " + timeseries.Name + " already exists")
+			response.SetStatus(TSEXISTS)
 		} else {
 			log.Println("Created new timeseries named " + timeseries.Name)
+			response.SetStatus(OK)
 		}
-		response.SetStatus(ACCEPTED)
 		s.out <- ServerResponse{conn, response}
 	case DELETE:
 		delete := &CreatePacket{}
@@ -179,7 +180,7 @@ func (s *Server) handleRequest(conn *net.Conn,
 		}
 		s.db.Delete(delete.Name)
 		log.Println("Deleted timeseries named " + delete.Name)
-		response.SetStatus(ACCEPTED)
+		response.SetStatus(OK)
 		s.out <- ServerResponse{conn, response}
 	case ADDPOINT:
 		add := AddPointPacket{}

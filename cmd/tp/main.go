@@ -62,7 +62,7 @@ func main() {
 			break
 		}
 		if response, err := tpClient.SendCommand(cmdString); err != nil {
-			fmt.Errorf("Err: %v", err)
+			fmt.Fprintln(os.Stderr, err)
 		} else {
 			fmt.Println(response)
 		}
