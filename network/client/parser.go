@@ -28,6 +28,7 @@ package client
 
 import (
 	"errors"
+	"github.com/codepr/timepipe/network/protocol"
 	"strconv"
 	"strings"
 )
@@ -46,11 +47,6 @@ var (
 	CommandEndReachedErr = errors.New("command reached end, no new tokens available")
 )
 
-var reservedWords = []string{
-	"CREATE", "DELETE", "ADD", "MADD", "QUERY", "WITH", "AVG", "FIRST",
-	"LAST", "RANGE",
-}
-
 type timerange struct {
 	start, end int64
 }
@@ -66,6 +62,7 @@ type Command struct {
 	Timestamp  int64
 	Value      float64
 	Range      timerange
+	Flag       byte
 }
 
 type parser struct {
@@ -165,6 +162,14 @@ func (p *parser) Parse() (Command, error) {
 		token, err = p.pop()
 		if token != "*" {
 			switch strings.ToUpper(token) {
+			case "MAX":
+				command.Flag = protocol.MAX << 1
+			case "MIN":
+				command.Flag = protocol.MIN << 1
+			case "FIRST":
+				command.Flag = protocol.FIRST << 1
+			case "LAST":
+				command.Flag = protocol.LAST << 1
 			case "<":
 				endTs, err := p.pop()
 				if err != nil {

@@ -79,7 +79,7 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 	case QUERY:
 		packet := protocol.QueryPacket{}
 		packet.Name = command.TimeSeries.Name
-		packet.Flags = 0
+		packet.Flags = command.Flag
 		payload = &packet
 		// TODO
 	}

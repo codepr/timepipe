@@ -49,7 +49,7 @@ func TestParseCreateWithNoRetention(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse CREATE query")
 	}
-	expected := Command{CREATE, timeseries{"ts-test", 0}, 0, 0, timerange{}}
+	expected := Command{CREATE, timeseries{"ts-test", 0}, 0, 0, timerange{}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse CREATE query")
 	}
@@ -72,7 +72,7 @@ func TestParseAdd(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse ADD query")
 	}
-	expected := Command{ADD, timeseries{"ts-test", 0}, 0, 12.2, timerange{}}
+	expected := Command{ADD, timeseries{"ts-test", 0}, 0, 12.2, timerange{}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse ADD query")
 	}
@@ -85,7 +85,7 @@ func TestParseAddWithTimestamp(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse ADD query")
 	}
-	expected := Command{ADD, timeseries{"ts-test", 0}, now, 12.2, timerange{}}
+	expected := Command{ADD, timeseries{"ts-test", 0}, now, 12.2, timerange{}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse ADD query")
 	}
@@ -97,7 +97,7 @@ func TestParseQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse QUERY query")
 	}
-	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{}}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse QUERY query")
 	}
@@ -110,7 +110,7 @@ func TestParseQueryWithMajorOf(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse QUERY query")
 	}
-	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, 0}}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, 0}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse QUERY query, expected %v got %v",
 			expected, command)
@@ -124,7 +124,7 @@ func TestParseQueryWithMinorOf(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse QUERY query")
 	}
-	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{0, now}}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{0, now}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse QUERY query")
 	}
@@ -138,7 +138,7 @@ func TestParseQueryWithRange(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse QUERY query")
 	}
-	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, then}}
+	expected := Command{QUERY, timeseries{"ts-test", 0}, 0, 0, timerange{now, then}, 0}
 	if command != expected {
 		t.Errorf("Failed to parse QUERY query")
 	}

@@ -33,9 +33,32 @@ import (
 	"github.com/codepr/timepipe/timeseries"
 )
 
+const (
+	MIN   = 1
+	MAX   = 2
+	FIRST = 3
+	LAST  = 4
+)
+
 type QueryPacket struct {
 	Name  string
-	Flags uint8
+	Flags byte
+}
+
+func (q *QueryPacket) Min() bool {
+	return q.Flags>>1&0x03 == MIN
+}
+
+func (q *QueryPacket) Max() bool {
+	return q.Flags>>1&0x03 == MAX
+}
+
+func (q *QueryPacket) First() bool {
+	return q.Flags>>1&0x03 == FIRST
+}
+
+func (q *QueryPacket) Last() bool {
+	return q.Flags>>1&0x03 == LAST
 }
 
 type QueryResponsePacket struct {
@@ -76,9 +99,39 @@ func (q *QueryPacket) MarshalBinary() ([]byte, error) {
 
 func (q *QueryPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler, error) {
 	qr := &QueryResponsePacket{}
-	qr.Records = make([]timeseries.Record, len(ts.Records))
-	for i, v := range ts.Records {
-		qr.Records[i] = *v
+	if q.Max() {
+		qr.Records = make([]timeseries.Record, 1)
+		r, err := ts.Max()
+		if err != nil {
+			return qr, nil
+		}
+		qr.Records[0] = *r
+	} else if q.Min() {
+		qr.Records = make([]timeseries.Record, 1)
+		r, err := ts.Min()
+		if err != nil {
+			return qr, nil
+		}
+		qr.Records[0] = *r
+	} else if q.First() {
+		qr.Records = make([]timeseries.Record, 1)
+		r, err := ts.First()
+		if err != nil {
+			return qr, nil
+		}
+		qr.Records[0] = *r
+	} else if q.Last() {
+		qr.Records = make([]timeseries.Record, 1)
+		r, err := ts.Last()
+		if err != nil {
+			return qr, nil
+		}
+		qr.Records[0] = *r
+	} else {
+		qr.Records = make([]timeseries.Record, len(ts.Records))
+		for i, v := range ts.Records {
+			qr.Records[i] = *v
+		}
 	}
 	header := Header{}
 	header.SetOpcode(QUERYRESPONSE)
