@@ -43,6 +43,7 @@ const (
 type QueryPacket struct {
 	Name  string
 	Flags byte
+	Range [2]int64
 }
 
 func (q *QueryPacket) Min() bool {
@@ -79,6 +80,9 @@ func (q *QueryPacket) UnmarshalBinary(buf []byte) error {
 	if err := binary.Read(reader, binary.BigEndian, &q.Flags); err != nil {
 		return err
 	}
+	if err := binary.Read(reader, binary.BigEndian, &q.Range); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -92,6 +96,9 @@ func (q *QueryPacket) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	if err := binary.Write(buf, binary.BigEndian, q.Flags); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buf, binary.BigEndian, q.Range); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
@@ -128,9 +135,46 @@ func (q *QueryPacket) Apply(ts *timeseries.TimeSeries) (encoding.BinaryMarshaler
 		}
 		qr.Records[0] = *r
 	} else {
-		qr.Records = make([]timeseries.Record, len(ts.Records))
-		for i, v := range ts.Records {
-			qr.Records[i] = *v
+		if q.Range[0] != 0 && q.Range[1] != 0 {
+			records, err := ts.Range(q.Range[0], q.Range[1])
+			if err != nil {
+				return qr, nil
+			}
+			qr.Records = make([]timeseries.Record, len(records))
+			for i, v := range records {
+				qr.Records[i] = v
+			}
+		} else if q.Range[0] != 0 {
+			last, err := ts.Last()
+			if err != nil {
+				return qr, nil
+			}
+			records, err := ts.Range(q.Range[0], last.Timestamp)
+			if err != nil {
+				return qr, nil
+			}
+			qr.Records = make([]timeseries.Record, len(records))
+			for i, v := range records {
+				qr.Records[i] = v
+			}
+		} else if q.Range[1] != 0 {
+			first, err := ts.First()
+			if err != nil {
+				return qr, nil
+			}
+			records, err := ts.Range(first.Timestamp, q.Range[1])
+			if err != nil {
+				return qr, nil
+			}
+			qr.Records = make([]timeseries.Record, len(records))
+			for i, v := range records {
+				qr.Records[i] = v
+			}
+		} else {
+			qr.Records = make([]timeseries.Record, len(ts.Records))
+			for i, v := range ts.Records {
+				qr.Records[i] = *v
+			}
 		}
 	}
 	header := Header{}

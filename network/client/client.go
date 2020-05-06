@@ -80,6 +80,8 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 		packet := protocol.QueryPacket{}
 		packet.Name = command.TimeSeries.Name
 		packet.Flags = command.Flag
+		packet.Range[0] = command.Range.start
+		packet.Range[1] = command.Range.end
 		payload = &packet
 		// TODO
 	}

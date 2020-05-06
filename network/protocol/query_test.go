@@ -31,8 +31,8 @@ import "testing"
 func TestQueryFlagMin(t *testing.T) {
 	q := QueryPacket{}
 	q.Flags = 0
-	if q.Min() == false && q.Last() != false &&
-		q.Max() != false && q.First() != false {
+	if q.Min() == false && (q.Last() != false ||
+		q.Max() != false || q.First() != false) {
 		t.Errorf("Failed QUERY MIN flag check")
 	}
 }
@@ -40,8 +40,8 @@ func TestQueryFlagMin(t *testing.T) {
 func TestQueryFlagMax(t *testing.T) {
 	q := QueryPacket{}
 	q.Flags = MAX << 1
-	if q.Max() == false && q.Last() != false &&
-		q.Min() != false && q.First() != false {
+	if q.Max() == false && (q.Last() != false ||
+		q.Min() != false || q.First() != false) {
 		t.Errorf("Failed QUERY MAX flag check")
 	}
 }
@@ -49,8 +49,8 @@ func TestQueryFlagMax(t *testing.T) {
 func TestQueryFlagFirst(t *testing.T) {
 	q := QueryPacket{}
 	q.Flags = FIRST << 1
-	if q.First() == false && q.Last() != false &&
-		q.Max() != false && q.Min() != false {
+	if q.First() == false && (q.Last() != false ||
+		q.Max() != false || q.Min() != false) {
 		t.Errorf("Failed QUERY FIRST flag check")
 	}
 }
@@ -58,8 +58,8 @@ func TestQueryFlagFirst(t *testing.T) {
 func TestQueryFlagLast(t *testing.T) {
 	q := QueryPacket{}
 	q.Flags = LAST << 1
-	if q.Last() == false && q.First() != false &&
-		q.Min() != false && q.Max() != false {
+	if q.Last() == false && (q.First() != false ||
+		q.Min() != false || q.Max() != false) {
 		t.Errorf("Failed QUERY LAST flag check")
 	}
 }
