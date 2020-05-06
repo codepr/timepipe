@@ -28,11 +28,11 @@ package client
 
 import (
 	"bufio"
+	"encoding"
 	"fmt"
+	"github.com/codepr/timepipe/network/protocol"
 	"io"
 	"net"
-
-	"github.com/codepr/timepipe/network/protocol"
 )
 
 type Client struct {
@@ -57,50 +57,42 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var payload []byte
 	header := protocol.Header{}
 	header.SetOpcode(uint8(command.Type))
+	var payload encoding.BinaryMarshaler
 	switch command.Type {
 	case CREATE:
 		packet := protocol.CreatePacket{}
 		packet.Name = command.TimeSeries.Name
 		packet.Retention = command.TimeSeries.Retention
-		payload, err = packet.MarshalBinary()
-		if err != nil {
-			return "", err
-		}
+		payload = &packet
 	case DELETE:
 		packet := protocol.DeletePacket{}
 		packet.Name = command.TimeSeries.Name
-		payload, err = packet.MarshalBinary()
-		if err != nil {
-			return "", err
-		}
+		payload = &packet
 	case ADD:
 		packet := protocol.AddPointPacket{}
 		packet.Name = command.TimeSeries.Name
 		packet.HaveTimestamp = command.Timestamp != 0
 		packet.Value = command.Value
-		payload, err = packet.MarshalBinary()
-		if err != nil {
-			return "", err
-		}
+		payload = &packet
 	case QUERY:
 		packet := protocol.QueryPacket{}
 		packet.Name = command.TimeSeries.Name
 		packet.Flags = 0
-		payload, err = packet.MarshalBinary()
-		if err != nil {
-			return "", err
-		}
+		payload = &packet
 		// TODO
 	}
-	header.Size = uint64(len(payload))
+	payloadBytes, err := payload.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+	header.Size = uint64(len(payloadBytes))
 	headerBytes, err := header.MarshalBinary()
 	if err != nil {
 		return "", err
 	}
-	packetBytes := append(headerBytes, payload...)
+	packetBytes := append(headerBytes, payloadBytes...)
 	_, err = c.conn.Write(packetBytes)
 	if err != nil {
 		return "", err
@@ -135,8 +127,14 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 		if err := res.UnmarshalBinary(payloadBuf); err != nil {
 			return "", err
 		}
-		for i := 0; i < len(res.Records); i++ {
-			response += fmt.Sprintf("%v %f\n", res.Records[i].Timestamp, res.Records[i].Value)
+		if len(res.Records) == 0 {
+			response = "(empty)"
+		} else {
+			response += "\n"
+			for i := 0; i < len(res.Records); i++ {
+				response += fmt.Sprintf("%v %f\n",
+					res.Records[i].Timestamp, res.Records[i].Value)
+			}
 		}
 	}
 	return response, nil
