@@ -120,9 +120,9 @@ func TestTimeSeriesRange(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	end := ts.AddPoint(65.98)
 	ts.AddPoint(77.0)
-	records, _ := ts.Range(start.Timestamp, end.Timestamp)
-	if len(records) != 4 {
-		t.Errorf("Wrong slice size returned, expected %v got %v", 4, len(records))
+	resTs, _ := ts.Range(start.Timestamp, end.Timestamp)
+	if len(resTs.Records) != 4 {
+		t.Errorf("Wrong slice size returned, expected %v got %v", 4, len(resTs.Records))
 	}
 }
 

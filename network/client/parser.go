@@ -175,7 +175,7 @@ func (p *parser) Parse() (Command, error) {
 				if err != nil {
 					return command, err
 				}
-				if command.Range.end, err = strconv.ParseInt(endTs, 10, 64); err != nil {
+				if command.Range.end, err = parseTimestamp(endTs); err != nil {
 					return command, err
 				}
 			case ">":
@@ -183,7 +183,7 @@ func (p *parser) Parse() (Command, error) {
 				if err != nil {
 					return command, err
 				}
-				if command.Range.start, err = strconv.ParseInt(startTs, 10, 64); err != nil {
+				if command.Range.start, err = parseTimestamp(startTs); err != nil {
 					return command, err
 				}
 			case "RANGE":
@@ -195,10 +195,10 @@ func (p *parser) Parse() (Command, error) {
 				if err != nil {
 					return command, err
 				}
-				if command.Range.start, err = strconv.ParseInt(startTs, 10, 64); err != nil {
+				if command.Range.start, err = parseTimestamp(startTs); err != nil {
 					return command, err
 				}
-				if command.Range.end, err = strconv.ParseInt(endTs, 10, 64); err != nil {
+				if command.Range.end, err = parseTimestamp(endTs); err != nil {
 					return command, err
 				}
 			default:
@@ -210,4 +210,18 @@ func (p *parser) Parse() (Command, error) {
 		return command, UnknownCommandErr
 	}
 	return command, nil
+}
+
+func parseTimestamp(str string) (int64, error) {
+	var mul int64 = 1
+	if len(str) == 10 {
+		mul = 1e9
+	} else if len(str) == 13 {
+		mul = 1e6
+	}
+	val, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return -1, err
+	}
+	return val * mul, nil
 }

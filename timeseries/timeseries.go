@@ -28,6 +28,7 @@ package timeseries
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -63,6 +64,10 @@ func NewTimeSeries(name string, retention int64) *TimeSeries {
 		ctime:     time.Now(),
 		Records:   []*Record{},
 	}
+}
+
+func (ts *TimeSeries) Len() int {
+	return len(ts.Records)
 }
 
 // AddPoint add a new point to an existing TimeSeries
@@ -128,17 +133,19 @@ func (ts *TimeSeries) Last() (*Record, error) {
 	return ts.Records[last], nil
 }
 
-func (ts *TimeSeries) Range(lo, hi int64) ([]Record, error) {
+func (ts *TimeSeries) Range(lo, hi int64) (*TimeSeries, error) {
 	if len(ts.Records) == 0 {
 		return nil, EmptyTimeSeriesErr
 	}
-	result := make([]Record, 0)
+	result := make([]*Record, 0)
 	for _, record := range ts.Records {
 		if record.Timestamp >= lo && record.Timestamp <= hi {
-			result = append(result, *record)
+			result = append(result, record)
 		}
 	}
-	return result, nil
+	tempTs := NewTimeSeries(fmt.Sprintf("%s%s", "range-tmp-", ts.Name), 0)
+	tempTs.Records = result
+	return tempTs, nil
 }
 
 func (ts *TimeSeries) Find(timestamp int64) (*Record, int) {
