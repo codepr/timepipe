@@ -174,7 +174,7 @@ func (s *Server) handleRequest(conn *net.Conn,
 		}
 		s.out <- ServerResponse{conn, response}
 	case DELETE:
-		delete := &CreatePacket{}
+		delete := &DeletePacket{}
 		if err := UnmarshalBinary(buf, delete); err != nil {
 			log.Fatal("UnmarshalBinary:", err)
 		}

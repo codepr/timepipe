@@ -63,6 +63,7 @@ type Command struct {
 	Value      float64
 	Range      timerange
 	Flag       byte
+	Avg        int64
 }
 
 type parser struct {
@@ -94,6 +95,7 @@ func (p *parser) pop() (string, error) {
 
 func (p *parser) Parse() (Command, error) {
 	command := Command{}
+	command.Avg = -1
 	if len(p.tokens) == 0 {
 		return command, EmptyCommandErr
 	}
@@ -178,6 +180,7 @@ func (p *parser) Parse() (Command, error) {
 				if command.Range.end, err = parseTimestamp(endTs); err != nil {
 					return command, err
 				}
+				parseMaybeAvg(p, &command)
 			case ">":
 				startTs, err := p.pop()
 				if err != nil {
@@ -186,6 +189,7 @@ func (p *parser) Parse() (Command, error) {
 				if command.Range.start, err = parseTimestamp(startTs); err != nil {
 					return command, err
 				}
+				parseMaybeAvg(p, &command)
 			case "RANGE":
 				startTs, err := p.pop()
 				if err != nil {
@@ -201,6 +205,7 @@ func (p *parser) Parse() (Command, error) {
 				if command.Range.end, err = parseTimestamp(endTs); err != nil {
 					return command, err
 				}
+				parseMaybeAvg(p, &command)
 			default:
 				return command, UnknownCommandErr
 			}
@@ -224,4 +229,20 @@ func parseTimestamp(str string) (int64, error) {
 		return -1, err
 	}
 	return val * mul, nil
+}
+
+func parseMaybeAvg(p *parser, c *Command) error {
+	avg, err := p.pop()
+	if err != nil || strings.ToUpper(avg) != "AVG" {
+		return err
+	}
+	c.Avg = 0
+	intervalStr, err := p.pop()
+	if err != nil {
+		return err
+	}
+	if c.Avg, err = strconv.ParseInt(intervalStr, 10, 64); err != nil {
+		return err
+	}
+	return nil
 }

@@ -82,6 +82,7 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 		packet.Flags = command.Flag
 		packet.Range[0] = command.Range.start
 		packet.Range[1] = command.Range.end
+		packet.Avg = command.Avg
 		payload = &packet
 		// TODO
 	}
