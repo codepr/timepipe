@@ -136,6 +136,10 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 			response = "(empty)"
 		} else {
 			response += "\n"
+			response += fmt.Sprintf("name: %s\nretention: %d\n",
+				command.TimeSeries.Name, command.TimeSeries.Retention)
+			response += "timestamp\t\tvalue\n"
+			response += "---------\t\t-----\n"
 			for i := 0; i < len(res.Records); i++ {
 				response += fmt.Sprintf("%v %f\n",
 					res.Records[i].Timestamp, res.Records[i].Value)
