@@ -209,6 +209,8 @@ func (p *parser) Parse() (Command, error) {
 			default:
 				return command, UnknownCommandErr
 			}
+		} else {
+			parseMaybeAvg(p, &command)
 		}
 		command.TimeSeries = ts
 	default:

@@ -115,11 +115,13 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 		case protocol.ACCEPTED:
 			response = "ACCEPTED"
 		case protocol.TSEXISTS:
-			response = "Timeseries already exists"
+			response = fmt.Sprintf("(error) - Timeseries '%s' already exists",
+				command.TimeSeries.Name)
 		case protocol.TSNOTFOUND:
-			response = "Timeseries not found"
+			response = fmt.Sprintf("(error) - Timeseries '%s' not found",
+				command.TimeSeries.Name)
 		case protocol.UNKNOWNCMD:
-			response = "Unknown command"
+			response = "(error) - Unknown command"
 		}
 	} else {
 		payloadBuf := make([]byte, responseHeader.Len())
