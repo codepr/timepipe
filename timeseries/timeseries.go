@@ -74,12 +74,48 @@ func (ts *TimeSeries) Len() int {
 // AddPoint add a new point to an existing TimeSeries
 func (ts *TimeSeries) AddPoint(value float64) Record {
 	record := newRecord(value)
-	ts.Records = append(ts.Records, record)
+	ts.AddRecord(record)
 	return *record
 }
 
 func (ts *TimeSeries) AddRecord(record *Record) {
-	ts.Records = append(ts.Records, record)
+	last, err := ts.Last()
+	if err != nil {
+		ts.Records = append(ts.Records, record)
+	} else {
+		first, _ := ts.First()
+		if record.Timestamp >= last.Timestamp {
+			ts.Records = append(ts.Records, record)
+		} else if record.Timestamp <= first.Timestamp {
+			ts.Records = append([]*Record{record}, ts.Records...)
+		} else {
+			// We need to binary search for the correct position of the
+			// new record
+			mid, left, right := 0, 0, ts.Len()-1
+			found := false
+			for left <= right {
+				mid = (left + right) / 2
+				if ts.Records[mid].Timestamp < record.Timestamp {
+					left = mid + 1
+				} else if ts.Records[mid].Timestamp > record.Timestamp {
+					right = mid - 1
+				} else {
+					found = true
+					break
+				}
+			}
+			if !found {
+				if ts.Records[left].Timestamp > record.Timestamp {
+					mid = left
+				} else {
+					mid = right
+				}
+			}
+			ts.Records = append(ts.Records, nil)
+			copy(ts.Records[mid+1:], ts.Records[mid:])
+			ts.Records[mid] = record
+		}
+	}
 }
 
 func (ts *TimeSeries) Average() (float64, error) {

@@ -49,6 +49,24 @@ func TestTimeSeriesAddPoint(t *testing.T) {
 	}
 }
 
+func TestTimeSeriesAddRecord(t *testing.T) {
+	ts := NewTimeSeries("test-ts", 3000)
+	record0 := Record{0, 2.4}
+	record1 := Record{1, 2.4}
+	record2 := Record{4, 2.4}
+	record := Record{2, 2.2}
+	ts.AddRecord(&record0)
+	ts.AddRecord(&record1)
+	ts.AddRecord(&record2)
+	ts.AddRecord(&record)
+	if ts.Len() != 4 {
+		t.Errorf("Failed to add new record to TimeSeries")
+	}
+	if ts.Records[2].Timestamp != 2 {
+		t.Errorf("Failed to add new record to TimeSeries")
+	}
+}
+
 func TestTimeSeriesAverage(t *testing.T) {
 	ts := NewTimeSeries("test-ts", 3000)
 	ts.AddPoint(98.2)
