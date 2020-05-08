@@ -30,6 +30,7 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/binary"
+	"fmt"
 	"github.com/codepr/timepipe/timeseries"
 )
 
@@ -236,4 +237,17 @@ func (qr *QueryResponsePacket) MarshalBinary() ([]byte, error) {
 		}
 	}
 	return buf.Bytes(), nil
+}
+
+func (qr *QueryResponsePacket) String() string {
+	var response string = ""
+	if len(qr.Records) == 0 {
+		response = "(empty)"
+	} else {
+		for i := 0; i < len(qr.Records); i++ {
+			response += fmt.Sprintf("%019v %f\n",
+				qr.Records[i].Timestamp, qr.Records[i].Value)
+		}
+	}
+	return response
 }

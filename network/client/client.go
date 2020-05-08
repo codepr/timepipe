@@ -41,6 +41,12 @@ type Client struct {
 	rw         *bufio.ReadWriter
 }
 
+type TpResponse struct {
+	Header  protocol.Header
+	Command Command
+	Payload protocol.QueryResponsePacket
+}
+
 func NewTimepipeClient(network, host, port string) (*Client, error) {
 	conn, err := net.Dial(network, host+":"+port)
 	if err != nil {
@@ -50,12 +56,11 @@ func NewTimepipeClient(network, host, port string) (*Client, error) {
 	return &Client{host, port, conn, rw}, nil
 }
 
-func (c *Client) SendCommand(cmdString string) (string, error) {
-	var response string = ""
+func (c *Client) SendCommand(cmdString string) (*TpResponse, error) {
 	parser := NewParser(cmdString)
 	command, err := parser.Parse()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	header := protocol.Header{}
 	header.SetOpcode(uint8(command.Type))
@@ -88,67 +93,65 @@ func (c *Client) SendCommand(cmdString string) (string, error) {
 	}
 	payloadBytes, err := payload.MarshalBinary()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	header.Size = uint64(len(payloadBytes))
 	headerBytes, err := header.MarshalBinary()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	packetBytes := append(headerBytes, payloadBytes...)
 	_, err = c.conn.Write(packetBytes)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	buf := make([]byte, 9)
 	if _, err := io.ReadAtLeast(c.rw, buf, 9); err != nil {
-		return "", err
+		return nil, err
 	}
 	responseHeader := protocol.Header{}
 	if err := responseHeader.UnmarshalBinary(buf); err != nil {
-		return "", err
+		return nil, err
 	}
+	r := &TpResponse{}
+	r.Command = command
+	r.Header = responseHeader
 	if responseHeader.Opcode() == protocol.ACK {
-		switch responseHeader.Status() {
-		case protocol.OK:
-			response = "OK"
-		case protocol.ACCEPTED:
-			response = "ACCEPTED"
-		case protocol.TSEXISTS:
-			response = fmt.Sprintf("(error) - Timeseries '%s' already exists",
-				command.TimeSeries.Name)
-		case protocol.TSNOTFOUND:
-			response = fmt.Sprintf("(error) - Timeseries '%s' not found",
-				command.TimeSeries.Name)
-		case protocol.UNKNOWNCMD:
-			response = "(error) - Unknown command"
-		}
-	} else {
-		payloadBuf := make([]byte, responseHeader.Len())
-		if _, err := io.ReadAtLeast(c.rw, payloadBuf, len(payloadBuf)); err != nil {
-			return "", err
-		}
-		res := protocol.QueryResponsePacket{}
-		if err := res.UnmarshalBinary(payloadBuf); err != nil {
-			return "", err
-		}
-		if len(res.Records) == 0 {
-			response = "(empty)"
-		} else {
-			response += "\n"
-			response += fmt.Sprintf("name: %s\nretention: %d\n",
-				command.TimeSeries.Name, command.TimeSeries.Retention)
-			response += "timestamp\t\tvalue\n"
-			response += "---------\t\t-----\n"
-			for i := 0; i < len(res.Records); i++ {
-				response += fmt.Sprintf("%v %f\n",
-					res.Records[i].Timestamp, res.Records[i].Value)
-			}
-		}
+		return r, nil
 	}
-	return response, nil
+	payloadBuf := make([]byte, responseHeader.Len())
+	if _, err := io.ReadAtLeast(c.rw, payloadBuf, len(payloadBuf)); err != nil {
+		return nil, err
+	}
+	if err := r.Payload.UnmarshalBinary(payloadBuf); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 func (c *Client) Close() {
 	c.conn.Close()
+}
+
+func (r TpResponse) String() string {
+	var response string = ""
+	if r.Header.Opcode() == protocol.ACK {
+		response = r.Header.String()
+		switch r.Header.Status() {
+		case protocol.TSEXISTS:
+			fallthrough
+		case protocol.TSNOTFOUND:
+			response += fmt.Sprintf(": %s", r.Command.TimeSeries.Name)
+		}
+	} else {
+		if len(r.Payload.Records) > 0 {
+			response = "\n"
+			response += fmt.Sprintf("name: %s\nretention: %d\n",
+				r.Command.TimeSeries.Name, r.Command.TimeSeries.Retention)
+			response += "timestamp\t\tvalue\n"
+			response += "---------\t\t-----\n"
+		}
+		response += r.Payload.String()
+	}
+	return response
 }

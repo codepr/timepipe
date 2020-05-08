@@ -101,3 +101,20 @@ func (h *Header) UnmarshalBinary(buf []byte) error {
 	h.Size = size
 	return nil
 }
+
+func (header Header) String() string {
+	var response string = ""
+	switch header.Status() {
+	case OK:
+		response = "(ok)"
+	case ACCEPTED:
+		response = "(accepted)"
+	case TSEXISTS:
+		response = "(error) - timeseries already exists"
+	case TSNOTFOUND:
+		response = "(error) - timeseries not found"
+	case UNKNOWNCMD:
+		response = "(error) - unknown command"
+	}
+	return response
+}

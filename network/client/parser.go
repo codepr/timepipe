@@ -45,6 +45,7 @@ var (
 	EmptyCommandErr      = errors.New("empty command string")
 	UnknownCommandErr    = errors.New("unknown command")
 	CommandEndReachedErr = errors.New("command reached end, no new tokens available")
+	MissingTimeStampErr  = errors.New("missing timestamp or aggregation rule, which can be:\n - RANGE upper lower\n - > timestamp-value \n - < timestamp-value\n - * for selecting all records")
 )
 
 type timerange struct {
@@ -162,6 +163,9 @@ func (p *parser) Parse() (Command, error) {
 			return command, err
 		}
 		token, err = p.pop()
+		if err != nil {
+			return command, MissingTimeStampErr
+		}
 		if token != "*" {
 			switch strings.ToUpper(token) {
 			case "MAX":
