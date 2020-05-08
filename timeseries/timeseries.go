@@ -29,6 +29,7 @@ package timeseries
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -193,7 +194,9 @@ func (ts *TimeSeries) AverageInterval(interval_ms int64) ([]Record, error) {
 				total += 1
 			}
 		}
-		result = append(result, Record{current, sum / float64(total)})
+		if !math.IsNaN(sum / float64(total)) {
+			result = append(result, Record{current, sum / float64(total)})
+		}
 		current += interval
 	}
 	return result, nil
