@@ -42,10 +42,12 @@ const (
 )
 
 var (
-	EmptyCommandErr      = errors.New("empty command string")
-	UnknownCommandErr    = errors.New("unknown command")
-	CommandEndReachedErr = errors.New("command reached end, no new tokens available")
-	MissingTimeStampErr  = errors.New("missing timestamp or aggregation rule, which can be:\n - RANGE upper lower\n - > timestamp-value \n - < timestamp-value\n - * for selecting all records")
+	EmptyCommandErr          = errors.New("empty command string")
+	UnknownCommandErr        = errors.New("unknown command")
+	CommandEndReachedErr     = errors.New("command reached end, no new tokens available")
+	MissingTimeSeriesNameErr = errors.New("missing timeseries name")
+	MissingValueErr          = errors.New("missing value")
+	MissingTimeStampErr      = errors.New("missing timestamp or aggregation rule, which can be:\n - RANGE upper lower\n - > timestamp-value \n - < timestamp-value\n - * for selecting all records")
 )
 
 type timerange struct {
@@ -110,7 +112,7 @@ func (p *parser) Parse() (Command, error) {
 		command.Type = CREATE
 		ts.Name, err = p.pop()
 		if err != nil {
-			return command, nil
+			return command, MissingTimeSeriesNameErr
 		}
 		token, err = p.pop()
 		if err != nil {
@@ -125,18 +127,18 @@ func (p *parser) Parse() (Command, error) {
 		command.Type = DELETE
 		ts.Name, err = p.pop()
 		if err != nil {
-			return command, nil
+			return command, MissingTimeSeriesNameErr
 		}
 		command.TimeSeries = ts
 	case "ADD":
 		command.Type = ADD
 		ts.Name, err = p.pop()
 		if err != nil {
-			return command, nil
+			return command, MissingTimeSeriesNameErr
 		}
 		token, err := p.pop()
 		if err != nil {
-			return command, nil
+			return command, MissingTimeStampErr
 		}
 		if token == "*" {
 			command.Timestamp = 0
@@ -148,7 +150,7 @@ func (p *parser) Parse() (Command, error) {
 		}
 		token, err = p.pop()
 		if err != nil {
-			return command, err
+			return command, MissingValueErr
 		}
 		if command.Value, err = strconv.ParseFloat(token, 64); err != nil {
 			return command, err
@@ -160,7 +162,7 @@ func (p *parser) Parse() (Command, error) {
 		command.Type = QUERY
 		ts.Name, err = p.pop()
 		if err != nil {
-			return command, err
+			return command, MissingTimeSeriesNameErr
 		}
 		token, err = p.pop()
 		if err != nil {
@@ -179,7 +181,7 @@ func (p *parser) Parse() (Command, error) {
 			case "<":
 				endTs, err := p.pop()
 				if err != nil {
-					return command, err
+					return command, MissingTimeStampErr
 				}
 				if command.Range.end, err = parseTimestamp(endTs); err != nil {
 					return command, err
@@ -188,7 +190,7 @@ func (p *parser) Parse() (Command, error) {
 			case ">":
 				startTs, err := p.pop()
 				if err != nil {
-					return command, err
+					return command, MissingTimeStampErr
 				}
 				if command.Range.start, err = parseTimestamp(startTs); err != nil {
 					return command, err
@@ -197,11 +199,11 @@ func (p *parser) Parse() (Command, error) {
 			case "RANGE":
 				startTs, err := p.pop()
 				if err != nil {
-					return command, err
+					return command, MissingTimeStampErr
 				}
 				endTs, err := p.pop()
 				if err != nil {
-					return command, err
+					return command, MissingTimeStampErr
 				}
 				if command.Range.start, err = parseTimestamp(startTs); err != nil {
 					return command, err

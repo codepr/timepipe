@@ -27,8 +27,9 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"fmt"
+	"github.com/c-bata/go-prompt"
 	"github.com/codepr/timepipe/network/client"
 	"os"
 	"strings"
@@ -40,8 +41,15 @@ const (
 	PORT = "4040"
 )
 
-func prompt(host, port string) {
-	fmt.Printf("%s:%s> ", host, port)
+func completer(d prompt.Document) []prompt.Suggest {
+	s := []prompt.Suggest{
+		{Text: "CREATE", Description: "CREATE timeseries-name [retention]"},
+		{Text: "DELETE", Description: "DELETE timeseries-name"},
+		{Text: "ADD", Description: "ADD timeseries-name [*|timestamp] value"},
+		{Text: "QUERY", Description: "QUERY timeseries-name [*|timestamp] [MIN|MAX|FIRST|LAST] [>|<|RANGE] timestamp-[lower|upper] [AVG [interval]]"},
+		{Text: "QUIT", Description: "Close the prompt"},
+	}
+	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 }
 
 func main() {
@@ -49,14 +57,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	reader := bufio.NewReader(os.Stdin)
+	promptString := fmt.Sprintf("%s:%s> ", HOST, PORT)
 	for {
-		prompt(HOST, PORT)
-		cmdString, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		cmdString = strings.TrimSuffix(cmdString, "\n")
+		cmdString := prompt.Input(promptString, completer,
+			prompt.OptionPreviewSuggestionTextColor(prompt.DarkGray),
+			prompt.OptionSuggestionBGColor(prompt.LightGray),
+			prompt.OptionDescriptionBGColor(prompt.LightGray),
+			prompt.OptionDescriptionTextColor(prompt.DarkGray),
+			prompt.OptionSuggestionTextColor(prompt.DarkGray),
+			prompt.OptionSelectedSuggestionBGColor(prompt.DarkGray),
+			prompt.OptionSelectedSuggestionTextColor(prompt.LightGray),
+			prompt.OptionSelectedDescriptionBGColor(prompt.DarkGray),
+			prompt.OptionSelectedDescriptionTextColor(prompt.LightGray),
+		)
 		if strings.ToUpper(cmdString) == "QUIT" {
 			tpClient.Close()
 			break
